@@ -6,7 +6,7 @@ The pipeline covers data preprocessing, class-imbalance handling, multi-model tr
 
 ## Overview
 
-Credit card fraud detection is a highly imbalanced classification problem — fraudulent transactions typically make up less than 0.2% of all transactions. This project trains and compares several models on the [ULB Credit Card Fraud dataset](https://www.kaggle.com/mlg-ulb/creditcardfraud) (anonymized, PCA-transformed transaction features) and serves the best-performing models behind a REST API, with per-model decision thresholds tuned for the precision/recall trade-off that matters for fraud detection.
+Credit card fraud detection is a highly imbalanced classification problem — fraudulent transactions typically make up less than 0.2% of all transactions. This project trains and compares several models (anonymized, PCA-transformed transaction features) and serves the best-performing models behind a REST API, with per-model decision thresholds tuned for the precision/recall trade-off that matters for fraud detection.
 
 **Dataset features:** `Time`, `V1`–`V28` (PCA components), `Amount` → target `Class` (0 = legitimate, 1 = fraud)
 
