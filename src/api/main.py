@@ -15,6 +15,7 @@ MODELS_DIR = BASE_DIR / "models"
 
 RANDOM_FOREST_PATH = MODELS_DIR / "random_forest.pkl"
 NEURAL_NETWORK_PATH = MODELS_DIR / "neural_network.pkl"
+VOTING_CLASSIFIER_PATH = MODELS_DIR / "Voting_Classifier.pkl"
 SCALER_PATH = MODELS_DIR / "scaler.pkl"
 
 # --------------------------------------------------
@@ -23,6 +24,7 @@ SCALER_PATH = MODELS_DIR / "scaler.pkl"
 
 random_forest_data = joblib.load(RANDOM_FOREST_PATH)
 neural_network_data = joblib.load(NEURAL_NETWORK_PATH)
+voting_classifier_data = joblib.load(VOTING_CLASSIFIER_PATH)
 scaler = joblib.load(SCALER_PATH)
 
 random_forest = random_forest_data["model"]
@@ -31,6 +33,8 @@ random_forest_threshold = random_forest_data["threshold"]
 neural_network = neural_network_data["model"]
 neural_network_threshold = neural_network_data["threshold"]
 
+voting_classifier = voting_classifier_data["model"]
+voting_classifier_threshold = voting_classifier_data["threshold"]
 
 # --------------------------------------------------
 # FastAPI application
@@ -70,6 +74,7 @@ def health():
         "models": {
             "random_forest": True,
             "neural_network": True,
+            "voting_classifier": True,
         },
     }
 
@@ -123,6 +128,33 @@ def predict_neural_network(request: PredictionRequest):
             "fraud": bool(prediction),
             "probability": float(probability),
             "threshold": float(neural_network_threshold),
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
+        
+# --------------------------------------------------
+# Voting Classifier prediction
+# --------------------------------------------------
+
+@app.post("/predict/voting-classifier")
+def predict_voting_classifier(request: PredictionRequest):
+    try:
+        X = np.array(request.features, dtype=float).reshape(1, -1)
+
+        probability = voting_classifier.predict_proba(X)[0, 1]
+
+        prediction = int(probability >= voting_classifier_threshold)
+
+        return {
+            "model": "voting_classifier",
+            "prediction": prediction,
+            "fraud": bool(prediction),
+            "probability": float(probability),
+            "threshold": float(voting_classifier_threshold),
         }
 
     except Exception as e:
