@@ -236,7 +236,6 @@ def train_voting_classifier(X_train, y_train, x_val, y_val, models, random_seed,
 
 
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--config",  help="path to the dataset and preprocessing config file", default="configs/config.yml")

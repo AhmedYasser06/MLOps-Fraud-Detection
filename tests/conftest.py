@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 from sklearn.datasets import make_classification
 
-
 def _stub_module(name):
     if name in sys.modules:
         return
