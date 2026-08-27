@@ -21,7 +21,7 @@ def eval_predict_with_threshold(model , x , threshold=0.5):
     return y_pred
 
 
-def eval_confusion_matrix(y_pred,y_true, title="" , save_png=False,  path=""): 
+def eval_confusion_matrix(y_pred,y_true, title="" , save_png=False,  path=""):
     labels = ['True Negative', 'False Positive' , 'False Negative', 'True Positive']
     cm = confusion_matrix(y_true=y_true, y_pred=y_pred)
     cm_flat = cm.flatten()
@@ -34,11 +34,11 @@ def eval_confusion_matrix(y_pred,y_true, title="" , save_png=False,  path=""):
     plt.xlabel('Predicted')
     plt.ylabel('Truth')
     if save_png:
-        plt.savefig(f'{path}/{title} Confusion Matrix.png') 
+        plt.savefig(f'{path}/{title} Confusion Matrix.png')
     else:
         plt.show()
-        
-     
+
+
 
 
 def eval_auc_precision_recall_curve(y_pred_prob, y_true):
@@ -49,7 +49,7 @@ def eval_auc_precision_recall_curve(y_pred_prob, y_true):
      Auc of precision recall curve give good indicator of over all model peformance.
      """
      precision, recall, _ = precision_recall_curve(y_score=y_pred_prob,y_true=y_true)
-     
+
      return float(auc(x=recall, y=precision))
 
 
@@ -66,13 +66,13 @@ def eval_precision_recall_for_different_threshold(y_pred_prob, y_true, title="" 
 
     if save_png:
         plt.savefig(f'{path}/{title} precision recall for different threshold.png')
-    else:    
+    else:
         plt.show()
 
 def eval_classification_report_confusion_matrix(y_pred, y_true, title="" ,save_png=False, path="", digits=5 ):
 
     print(f'{title} Classification Report')
-    print(classification_report(y_pred=y_pred, y_true=y_true, digits=digits))   
+    print(classification_report(y_pred=y_pred, y_true=y_true, digits=digits))
     report_stats = classification_report(y_pred=y_pred, y_true=y_true, digits=digits, output_dict=True)
 
     labels = ['True Negative', 'False Positive' , 'False Negative', 'True Positive'] # order of confusion matrix labels
@@ -87,9 +87,9 @@ def eval_classification_report_confusion_matrix(y_pred, y_true, title="" ,save_p
     plt.xlabel('Predicted')
     plt.ylabel('Truth')
 
-    if save_png: 
+    if save_png:
         plt.savefig(f'{path}/{title} Confusion Matrix.png')
-    else: 
+    else:
         plt.show()
 
     return report_stats
@@ -102,17 +102,17 @@ def eval_precision_recall_curve(y_pred_prob,y_true, title="", save_png=False, pa
 
     precision, recall, thresholds = precision_recall_curve(y_score=y_pred_prob,y_true=y_true)
     plt.figure(figsize=(8, 8))
-    plt.plot(recall, precision, color='darkorange', lw=2, label=f'Precision-Recall curve')
+    plt.plot(recall, precision, color='darkorange', lw=2, label='Precision-Recall curve')
     plt.xlabel('Recall')
     plt.ylabel('Precision')
     plt.title(f'{title} Precision-Recall Curve')
     plt.legend()
     if save_png:
-        plt.savefig(f'{path}/{title} precision recall area under curve.png') 
-    else:    
-        plt.show()   
+        plt.savefig(f'{path}/{title} precision recall area under curve.png')
+    else:
+        plt.show()
 
-def eval_best_threshold(y_pred,y_true , with_repect_to="f1_score"): 
+def eval_best_threshold(y_pred,y_true , with_repect_to="f1_score"):
     """
     Get best threshold from precision recall curve with respect to f1_score, precision or recall
 
@@ -134,7 +134,7 @@ def eval_best_threshold(y_pred,y_true , with_repect_to="f1_score"):
     elif with_repect_to == "recall":
         optimal_threshold_index = argmax(recall)
     else:
-        raise ValueError("Invalid value for with_repect_to. Please choose 'f1_score', 'precision' or 'recall'.")        
+        raise ValueError("Invalid value for with_repect_to. Please choose 'f1_score', 'precision' or 'recall'.")
 
     optimal_threshold = thresholds[optimal_threshold_index]
     print("Optimal Threshold:", optimal_threshold , "F1 Score:", f1_scores[optimal_threshold_index])
@@ -154,7 +154,7 @@ def eval_update_model_stats(model_comparison , model_name, report_val, metric_co
             "F1 Score Positive class": report_val['1']['f1-score'],
             "F1 Score Negative class": report_val['0']['f1-score'],
             "Precision Positive class": report_val['1']['precision'],
-            "Recall Positive class": report_val['1']['recall'],   
+            "Recall Positive class": report_val['1']['recall'],
             "F1 Score Average": report_val['macro avg']['f1-score'],
             }
     else:
@@ -167,10 +167,10 @@ def eval_update_model_stats(model_comparison , model_name, report_val, metric_co
             if value:
                   model_comparison[model_name][f"{key} negative class"] = report_val['0'][key]
 
-       if metric_config['macro_avg']: 
+       if metric_config['macro_avg']:
            model_comparison[model_name]['F1 macro avg'] = report_val['macro avg']['f1-score']
-                   
-     
+
+
     return model_comparison
 
 
@@ -209,13 +209,13 @@ def evaluate_model(model, model_comparison, path, title, X_train, y_train, x_val
 
         if evaluation_config['optimal_threshold'] == True: # we use only training data to find optimal threshold
 
-            y_train_pred_proba = model.predict_proba(X_train)[:,1] 
+            y_train_pred_proba = model.predict_proba(X_train)[:,1]
             optimal_threshold , f1_scores = eval_best_threshold(y_pred=y_train_pred_proba,y_true=y_train)
 
             y_val_pred = eval_predict_with_threshold(model=model, x=x_val, threshold=optimal_threshold)
             report_val = eval_classification_report_confusion_matrix(y_pred=y_val_pred,y_true=y_val, title= title + ' val with optimal threshold', save_png=save_cm_plots, path=eval_plots_path)
             model_comparison = eval_update_model_stats(model_comparison, title + ' optimal threshold',  report_val ,  evaluation_config['metric'])
-            
+
             if evaluation_config['metric']['PR_AUC'] == True: # It will same as validation (0.5 threshold)
                 y_val_pred_proba = model.predict_proba(x_val)[:,1]
                 model_comparison[title + ' optimal threshold']['PR AUC'] = eval_auc_precision_recall_curve(y_pred_prob=y_val_pred_proba, y_true=y_val)

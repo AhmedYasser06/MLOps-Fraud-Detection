@@ -12,7 +12,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
-from mlxtend.classifier import EnsembleVoteClassifier 
+from mlxtend.classifier import EnsembleVoteClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import RobustScaler
 from sklearn.model_selection import GridSearchCV , StratifiedKFold , RandomizedSearchCV
@@ -37,10 +37,10 @@ def train_random_forest(X_train, y_train, X_val, y_val, random_seed, model_compa
             param_distributions=param_distributions,
             scoring=scorer,
             cv=stratified_kfold,
-            n_iter=20,  
+            n_iter=20,
             n_jobs=-1,
             verbose=2,
-            random_state=random_seed 
+            random_state=random_seed
         )
 
         random_search.fit(X_train, y_train)
@@ -52,15 +52,15 @@ def train_random_forest(X_train, y_train, X_val, y_val, random_seed, model_compa
 
 
     rf = RandomForestClassifier(
-        **parameters,         
-        random_state=random_seed  
+        **parameters,
+        random_state=random_seed
     )
 
-    rf.fit(X_train, y_train)    
+    rf.fit(X_train, y_train)
 
     model_comparison , optimal_threshold = evaluate_model(rf, model_comparison, path, 'Random Forest', X_train, y_train, X_val, y_val, trainer['evaluation'])
 
-    return {"model": rf ,  "parameters": parameters, "threshold": optimal_threshold} 
+    return {"model": rf ,  "parameters": parameters, "threshold": optimal_threshold}
 
 
 def train_knn(X_train, y_train, X_val, y_val, random_seed, model_comparison, trainer):
@@ -80,10 +80,10 @@ def train_knn(X_train, y_train, X_val, y_val, random_seed, model_comparison, tra
             param_distributions=param_distributions,
             scoring=scorer,
             cv=stratified_kfold,
-            n_iter=20,  
+            n_iter=20,
             n_jobs=-1,
             verbose=2,
-            random_state=random_seed 
+            random_state=random_seed
         )
 
         random_search.fit(X_train, y_train)
@@ -113,20 +113,20 @@ def train_logistic_regression(X_train_scaled, y_train, X_val_scaled, y_val, rand
                             'C':            [0.1, 1.0, 10.0],
                             'penalty':      ['l2'],
                             'class_weight': ['balanced', None, {0: 0.35, 1: 0.65}, {0: 0.25, 1: 0.75}, {0: 0.15, 1: 0.85}],
-                            'solver':       ['sag', 'lbfgs', 'saga', ' newton-cg'],  
+                            'solver':       ['sag', 'lbfgs', 'saga', ' newton-cg'],
                             'max_iter':     [400, 500, 600, 800],
                         }
-                        
+
              lr = LogisticRegression()
              scorer = make_scorer(f1_score, pos_label=1)
 
-             stratified_kfold = StratifiedKFold(n_splits=5, 
+             stratified_kfold = StratifiedKFold(n_splits=5,
                                             shuffle=True,
                                             random_state=42)
 
-             grid_search = GridSearchCV(lr, 
-                                    param_grid,cv=stratified_kfold, 
-                                    scoring=scorer, 
+             grid_search = GridSearchCV(lr,
+                                    param_grid,cv=stratified_kfold,
+                                    scoring=scorer,
                                     n_jobs=-1)
 
              grid_search.fit(X_train_scaled, y_train)
@@ -134,10 +134,10 @@ def train_logistic_regression(X_train_scaled, y_train, X_val_scaled, y_val, rand
              best_params = grid_search.best_params_
              print("Best Hyperparameters:", best_params)
 
-  
+
     else:
         best_params = trainer['trainer']['Logistic_Regression']['parameters']
-       
+
 
     lr = LogisticRegression(**best_params, random_state=random_seed)
     lr.fit(X_train_scaled, y_train)
@@ -145,7 +145,7 @@ def train_logistic_regression(X_train_scaled, y_train, X_val_scaled, y_val, rand
     model_comparison , optimal_threshold = evaluate_model(lr, model_comparison, path, 'Logistic Regression', X_train_scaled, y_train, X_val_scaled, y_val, trainer['evaluation'])
 
     return {"model": lr , "parameters": best_params, "threshold": optimal_threshold}
-    
+
 
 
 def train_neural_network(X_train_scaled, y_train, X_val_scaled, y_val, random_seed, model_comparison,  trainer):
@@ -156,9 +156,9 @@ def train_neural_network(X_train_scaled, y_train, X_val_scaled, y_val, random_se
         param_dist = {
         'activation': ['relu'],
         'hidden_layer_sizes': [
-            (30, 20), 
-            (30, 20, 10), 
-            (40, 30, 20), 
+            (30, 20),
+            (30, 20, 10),
+            (40, 30, 20),
             (64, 32, 16),
             (64, 32, 32, 16)
         ],
@@ -171,18 +171,18 @@ def train_neural_network(X_train_scaled, y_train, X_val_scaled, y_val, random_se
         }
 
         MLP_CV = MLPClassifier()
-        scorer = make_scorer(f1_score, pos_label=1)  
+        scorer = make_scorer(f1_score, pos_label=1)
         cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=random_seed)
         random_search = RandomizedSearchCV(MLP_CV, param_distributions=param_dist, n_iter=30, cv=cv, scoring=scorer, n_jobs=-1, random_state=random_seed)
         random_search.fit(X_train_scaled, y_train)
 
         best_params = random_search.best_params_
         MLP = MLPClassifier(**best_params)
-        
+
     else:
         # load parameters from config file
         best_params = trainer['trainer']['Neural_Network']['parameters']
-    
+
         MLP = MLPClassifier(
             hidden_layer_sizes=eval(best_params['hidden_layer_sizes']), # eval to convert string to tuple
             activation=best_params['activation'],
@@ -208,7 +208,7 @@ def train_voting_classifier(X_train, y_train, x_val, y_val, models, random_seed,
     # Ensure models are present in the provided dictionary
     required_models = ['Logistic_Regression', 'Neural_Network', 'Random_forest']
     missing_models = [model for model in required_models if model not in models]
-    
+
     if missing_models:
         raise ValueError(f"The following required models are missing: {', '.join(missing_models)}")
 
@@ -241,20 +241,20 @@ if __name__ == "__main__":
     parser.add_argument("--config",  help="path to the dataset and preprocessing config file", default="configs/config.yml")
     parser.add_argument("--trainer", help="path to trainer and evaluation config file", default="configs/trainer_config.yml")
     args = parser.parse_args()
-   
+
     config =  load_config(args.config)
     trainer = load_config(args.trainer)
 
     RANDOM_SEED = config['random_seed']
     np.random.seed(RANDOM_SEED)
-    
+
     X_train, y_train, X_val, y_val = load_data(config)
     X_train_scaled, X_val_scaled = scale_data(X_train, X_val, config['preprocessing']['scaler_type'])
 
     if config['balancing']['do_balance']: # balance data
         X_train_scaled , y_train = balance_data_transformation(X_train_scaled, y_train, balance_type= config['balancing']['method'], sampling_strategy=config['balancing']['sampling_strategy'], k=5,  random_state=RANDOM_SEED)
         X_train = X_train_scaled.copy()
-    
+
     model_comparison = {} # model comparison stats dictionary
     models = {} # trained models dictionary
 
@@ -271,7 +271,7 @@ if __name__ == "__main__":
         models['Logistic_Regression'] = train_logistic_regression(X_train_scaled, y_train, X_val_scaled, y_val, RANDOM_SEED, model_comparison, trainer)
 
     if trainer['trainer']['Neural_Network']['train']:
-        models['Neural_Network'] = train_neural_network(X_train_scaled, y_train, X_val_scaled, y_val, RANDOM_SEED, model_comparison, trainer)    
+        models['Neural_Network'] = train_neural_network(X_train_scaled, y_train, X_val_scaled, y_val, RANDOM_SEED, model_comparison, trainer)
 
     if trainer['trainer']['KNN']['train']:
         models['KNN'] = train_knn(X_train_scaled, y_train, X_val_scaled, y_val, RANDOM_SEED, model_comparison, trainer)

@@ -11,7 +11,7 @@ def scale_data(train_data, val_data=None, scaler_type='robust'):
     Parameters:
     - train_data (numpy array or pandas DataFrame): The training data to be scaled.
     - val_data (numpy array or pandas DataFrame, optional): The validation data to be scaled. Default is None.
-    - scaler_type (str, optional): The type of scaler to be used. 
+    - scaler_type (str, optional): The type of scaler to be used.
       Options: 'minmax' for MinMaxScaler, 'standard' for StandardScaler.
       Default is 'minmax'.
 
@@ -89,13 +89,13 @@ def balance_data_transformation(X_train, y_train, balance_type='smote',sampling_
     - X_resampled (numpy array or pandas DataFrame): The balanced training data features.
     - y_resampled (numpy array or pandas DataFrame): The balanced training data labels.
     """
-    
- 
+
+
     if isinstance(X_train, pd.DataFrame):
         X_train = X_train.values
     if isinstance(y_train, pd.DataFrame):
-        y_train = y_train.values.ravel() 
-    
+        y_train = y_train.values.ravel()
+
     print("Dataset before balancing:")
     print(f"Number of Non-fraud transactions: {len(y_train[y_train == 0])}")
     print(f"Number of fraud transactions:     {len(y_train[y_train == 1])}")
@@ -108,15 +108,15 @@ def balance_data_transformation(X_train, y_train, balance_type='smote',sampling_
         sampler = SMOTE(random_state=random_state, sampling_strategy=sampling_strategy, k_neighbors=k)
     elif balance_type == 'SMOTEENN':
         sampler = SMOTEENN(
-                          random_state=random_state, 
+                          random_state=random_state,
                           sampling_strategy=sampling_strategy,
                           smote=SMOTE(random_state=random_state,
                                       sampling_strategy=sampling_strategy,
-                                      k_neighbors=k),  
+                                      k_neighbors=k),
                          )
     elif balance_type == 'SMOTETomek':
         sampler = SMOTETomek(
-                             random_state=random_state, 
+                             random_state=random_state,
                              sampling_strategy=sampling_strategy,
                              smote=SMOTE(random_state=random_state,
                                          sampling_strategy=sampling_strategy,
@@ -125,10 +125,10 @@ def balance_data_transformation(X_train, y_train, balance_type='smote',sampling_
                         )
     else:
         raise ValueError("Invalid balance type. Please choose 'under_sampling', 'over_sampling', 'smote', 'SMOTEENN', or 'SMOTETomek'.")
-    
+
     # Fit and resample the training data using the chosen sampler
     X_resampled, y_resampled = sampler.fit_resample(X_train, y_train)
-    
+
     print("\n Dataset after balancing:")
     print(f"Number of Non-fraud transactions: {len(y_resampled[y_resampled == 0])}")
     print(f"Number of fraud transactions:     {len(y_resampled[y_resampled == 1])}")

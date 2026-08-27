@@ -6,7 +6,6 @@ import sys
 import types
 from unittest.mock import MagicMock
 
-import numpy as np
 import pytest
 from sklearn.datasets import make_classification
 

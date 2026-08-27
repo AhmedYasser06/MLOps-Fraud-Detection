@@ -115,9 +115,9 @@ def predict_random_forest(request: PredictionRequest):
 def predict_neural_network(request: PredictionRequest):
     try:
         X = np.array(request.features, dtype=float).reshape(1, -1)
-        
+
         X_scaled = scaler.transform(X)
-        
+
         probability = neural_network.predict_proba(X_scaled)[0, 1]
 
         prediction = int(probability >= neural_network_threshold)
@@ -135,7 +135,7 @@ def predict_neural_network(request: PredictionRequest):
             status_code=400,
             detail=str(e),
         )
-        
+
 # --------------------------------------------------
 # Voting Classifier prediction
 # --------------------------------------------------
@@ -162,8 +162,8 @@ def predict_voting_classifier(request: PredictionRequest):
             status_code=400,
             detail=str(e),
         )
-        
-        
+
+
 # --------------------------------------------------
 # Module 2 — production model, loaded by MLflow registry stage
 # --------------------------------------------------

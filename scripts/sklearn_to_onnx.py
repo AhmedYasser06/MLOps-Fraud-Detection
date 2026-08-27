@@ -45,7 +45,7 @@ def convert_and_save(model, name: str, initial_types=INITIAL_TYPE, options=None)
         initial_types=initial_types,
         options=options or {},
         target_opset=17,
-        
+
     )
     out_path = OUTPUT_DIR / f"{name}.onnx"
     onnx.save(onnx_model, out_path)
