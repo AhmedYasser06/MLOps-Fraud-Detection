@@ -1,0 +1,94 @@
+schema: '2.0'
+stages:
+  train:
+    cmd: python -m src.train_mlflow --config configs/config.yml --trainer 
+      configs/trainer_config.yml
+    deps:
+    - path: configs/config.yml
+      hash: md5
+      md5: e632d87016d4dc7c3f8ed2ed375544f2
+      size: 631
+      isexec: true
+    - path: configs/trainer_config.yml
+      hash: md5
+      md5: 7e67ed238e8e9df6a042d5ff1cd38571
+      size: 2002
+      isexec: true
+    - path: data/split/train.csv
+      hash: md5
+      md5: 0d342d1c8818625d739b3bb1b8d1ecdd
+      size: 90491647
+      isexec: true
+    - path: data/split/val.csv
+      hash: md5
+      md5: 9b835a8507b6648295bfda1291f2e18f
+      size: 30162064
+      isexec: true
+    - path: src/train_mlflow.py
+      hash: md5
+      md5: 4cfb828a212f9235f50498090abc18e8
+      size: 14286
+      isexec: true
+    - path: src/trainer.py
+      hash: md5
+      md5: feb46a48264128c0d93a8a572b6fed7d
+      size: 11984
+      isexec: true
+    params:
+      configs/trainer_config.yml:
+        trainer.Logistic_Regression.parameters:
+          C: 0.1
+          class_weight:
+            0: 0.2
+            1: 0.8
+          max_iter: 500
+          penalty: l2
+          solver: sag
+        trainer.Neural_Network.parameters:
+          hidden_layer_sizes: (128, 64)
+          activation: tanh
+          solver: sgd
+          alpha: 0.1
+          learning_rate_init: 0.1
+          batch_size: 512
+          max_iter: 500
+        trainer.Random_forest.parameters:
+          n_estimators: 400
+          min_samples_leaf: 5
+          min_samples_split: 2
+          class_weight:
+            0: 0.2
+            1: 0.8
+          bootstrap: true
+          n_jobs: -1
+    outs:
+    - path: reports/last_run_id.txt
+      hash: md5
+      md5: 9a6ea93c03509aad450f4e3af599be1d
+      size: 32
+      isexec: true
+  evaluate:
+    cmd: python -m src.pipeline_stages.evaluate --run-id-file 
+      reports/last_run_id.txt
+    deps:
+    - path: data/split/test.csv
+      hash: md5
+      md5: e6b40912b9e16e2f8be918aa0a6fc706
+      size: 30162540
+      isexec: true
+    - path: reports/last_run_id.txt
+      hash: md5
+      md5: 9a6ea93c03509aad450f4e3af599be1d
+      size: 32
+      isexec: true
+    - path: src/pipeline_stages/evaluate.py
+      hash: md5
+      md5: 9c310e40f1c5b49917a36e56eb6ba0aa
+      size: 2293
+      isexec: true
+    outs:
+    - path: reports/metrics.json
+      hash: md5
+      md5: 01de89729c2fcb75626a00b4d88cf708
+      size: 290
+      isexec: true

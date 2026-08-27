@@ -45,7 +45,6 @@ def convert_and_save(model, name: str, initial_types=INITIAL_TYPE, options=None)
         initial_types=initial_types,
         options=options or {},
         target_opset=17,
-        
     )
     out_path = OUTPUT_DIR / f"{name}.onnx"
     onnx.save(onnx_model, out_path)
@@ -60,7 +59,9 @@ def convert_and_save(model, name: str, initial_types=INITIAL_TYPE, options=None)
     return out_path
 
 
-def smoke_test(onnx_path: Path, sklearn_model, X_sample: np.ndarray, has_scaler_output=False):
+def smoke_test(
+    onnx_path: Path, sklearn_model, X_sample: np.ndarray, has_scaler_output=False
+):
     """Compare ONNX Runtime output to the original sklearn output."""
     sess = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
     input_name = sess.get_inputs()[0].name
@@ -90,23 +91,37 @@ def main():
 
     # --- Random Forest --------------------------------------------------
     rf_data = joblib.load(MODELS_DIR / "random_forest.pkl")
-    path = convert_and_save(rf_data["model"], "random_forest", options={id(rf_data["model"]): CONVERT_OPTIONS})
+    path = convert_and_save(
+        rf_data["model"],
+        "random_forest",
+        options={id(rf_data["model"]): CONVERT_OPTIONS},
+    )
     smoke_test(path, rf_data["model"], X_sample)
 
     # --- Logistic Regression --------------------------------------------
     lr_data = joblib.load(MODELS_DIR / "Logistic_Regression.pkl")
-    path = convert_and_save(lr_data["model"], "logistic_regression", options={id(lr_data["model"]): CONVERT_OPTIONS})
+    path = convert_and_save(
+        lr_data["model"],
+        "logistic_regression",
+        options={id(lr_data["model"]): CONVERT_OPTIONS},
+    )
     smoke_test(path, lr_data["model"], X_sample)
 
     # --- Neural Network (MLPClassifier) ----------------------------------
     nn_data = joblib.load(MODELS_DIR / "neural_network.pkl")
-    path = convert_and_save(nn_data["model"], "neural_network", options={id(nn_data["model"]): CONVERT_OPTIONS})
+    path = convert_and_save(
+        nn_data["model"],
+        "neural_network",
+        options={id(nn_data["model"]): CONVERT_OPTIONS},
+    )
     # NN expects scaled input (see src/api/main.py) -- scale before comparing
     X_scaled = scaler.transform(X_sample)
     smoke_test(path, nn_data["model"], X_scaled)
 
     print("\nAll individual models converted. For the Voting Classifier,")
-    print("run voting_classifier_to_onnx.py (mlxtend isn't skl2onnx-convertible directly).")
+    print(
+        "run voting_classifier_to_onnx.py (mlxtend isn't skl2onnx-convertible directly)."
+    )
 
 
 if __name__ == "__main__":

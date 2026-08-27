@@ -131,7 +131,9 @@ def main():
         merged.graph.node.extend(g.graph.node)
         merged.graph.initializer.extend(g.graph.initializer)
         merged.graph.value_info.extend(g.graph.value_info)
-        merged.graph.value_info.extend(g.graph.output)  # keep intermediate proba tensors typed
+        merged.graph.value_info.extend(
+            g.graph.output
+        )  # keep intermediate proba tensors typed
 
     # --- 3. Add weighted-average nodes on top of the 3 proba outputs ----
     weight_sum = float(sum(weights))
@@ -146,21 +148,33 @@ def main():
         )
         weighted_name = f"weighted_{i}"
         new_nodes.append(
-            helper.make_node("Mul", [out_name, w_tensor_name], [weighted_name], name=f"mul_{i}")
+            helper.make_node(
+                "Mul", [out_name, w_tensor_name], [weighted_name], name=f"mul_{i}"
+            )
         )
         weighted_names.append(weighted_name)
 
     sum_01 = "sum_01"
-    new_nodes.append(helper.make_node("Add", [weighted_names[0], weighted_names[1]], [sum_01], name="add_01"))
+    new_nodes.append(
+        helper.make_node(
+            "Add", [weighted_names[0], weighted_names[1]], [sum_01], name="add_01"
+        )
+    )
     sum_all = "sum_all"
-    new_nodes.append(helper.make_node("Add", [sum_01, weighted_names[2]], [sum_all], name="add_all"))
+    new_nodes.append(
+        helper.make_node("Add", [sum_01, weighted_names[2]], [sum_all], name="add_all")
+    )
 
     wsum_tensor_name = "weight_sum"
     new_initializers.append(
-        numpy_helper.from_array(np.array([weight_sum], dtype=np.float32), name=wsum_tensor_name)
+        numpy_helper.from_array(
+            np.array([weight_sum], dtype=np.float32), name=wsum_tensor_name
+        )
     )
     new_nodes.append(
-        helper.make_node("Div", [sum_all, wsum_tensor_name], ["probabilities"], name="div_final")
+        helper.make_node(
+            "Div", [sum_all, wsum_tensor_name], ["probabilities"], name="div_final"
+        )
     )
 
     merged.graph.node.extend(new_nodes)
@@ -169,7 +183,9 @@ def main():
     # merged.graph.output was cleared earlier, so this is the ONLY graph
     # output -- a clean single-output interface, the 3 sub-model
     # label/probability outputs stay as internal (typed) intermediates.
-    final_output = helper.make_tensor_value_info("probabilities", TensorProto.FLOAT, [None, 2])
+    final_output = helper.make_tensor_value_info(
+        "probabilities", TensorProto.FLOAT, [None, 2]
+    )
     merged.graph.output.extend([final_output])
 
     onnx.checker.check_model(merged)

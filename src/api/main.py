@@ -51,6 +51,7 @@ app = FastAPI(
 # Request schema
 # --------------------------------------------------
 
+
 class PredictionRequest(BaseModel):
     features: list[float]
 
@@ -58,6 +59,7 @@ class PredictionRequest(BaseModel):
 # --------------------------------------------------
 # Health check
 # --------------------------------------------------
+
 
 @app.get("/")
 def root():
@@ -82,6 +84,7 @@ def health():
 # --------------------------------------------------
 # Random Forest prediction
 # --------------------------------------------------
+
 
 @app.post("/predict/random-forest")
 def predict_random_forest(request: PredictionRequest):
@@ -111,13 +114,14 @@ def predict_random_forest(request: PredictionRequest):
 # Neural Network prediction
 # --------------------------------------------------
 
+
 @app.post("/predict/neural-network")
 def predict_neural_network(request: PredictionRequest):
     try:
         X = np.array(request.features, dtype=float).reshape(1, -1)
-        
+
         X_scaled = scaler.transform(X)
-        
+
         probability = neural_network.predict_proba(X_scaled)[0, 1]
 
         prediction = int(probability >= neural_network_threshold)
@@ -135,10 +139,12 @@ def predict_neural_network(request: PredictionRequest):
             status_code=400,
             detail=str(e),
         )
-        
+
+
 # --------------------------------------------------
 # Voting Classifier prediction
 # --------------------------------------------------
+
 
 @app.post("/predict/voting-classifier")
 def predict_voting_classifier(request: PredictionRequest):
@@ -162,3 +168,39 @@ def predict_voting_classifier(request: PredictionRequest):
             status_code=400,
             detail=str(e),
         )
+
+
+# --------------------------------------------------
+# Module 2 — production model, loaded by MLflow registry stage
+# --------------------------------------------------
+# Loaded once at startup, same as the .pkl models above — never per-request.
+# This is what changes served predictions when you promote a new model
+
+_production_model = None
+try:
+    from src.predict_registry import load_production_model
+
+    _production_model = load_production_model()
+except Exception as _e:  # MLflow server not reachable — degrade gracefully
+    print(f"[startup] Could not load Production model from MLflow registry: {_e}")
+
+
+@app.post("/predict/production")
+def predict_production(request: PredictionRequest):
+    if _production_model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Production model not loaded — is the MLflow tracking server reachable?",
+        )
+    try:
+        X = np.array(request.features, dtype=float).reshape(1, -1)
+        result = _production_model.predict(X)
+        return {
+            "model": "production",
+            "prediction": int(result["prediction"][0]),
+            "fraud": bool(result["prediction"][0]),
+            "probability": float(result["probability"][0]),
+            "threshold": float(result["threshold"]),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

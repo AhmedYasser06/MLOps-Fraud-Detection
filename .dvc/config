@@ -1,0 +1,5 @@
+[core]
+    remote = storage
+['remote "storage"']
+    url = s3://prodml-dvc-fraud
+    endpointurl = http://localhost:9000

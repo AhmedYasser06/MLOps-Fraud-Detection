@@ -208,3 +208,14 @@ Thumbs.db
 
 # PyPI configuration file
 .pypirc
+# MLflow local tracking/generated artifacts
+mlruns/
+models/*_mlflow/
+
+# Local Python dependency snapshot
+requirements_frozen.txt
+
+# Terraform generated state/cache
+infra/.terraform/
+infra/terraform.tfstate
+infra/terraform.tfstate.*

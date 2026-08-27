@@ -1,0 +1,10 @@
+{
+  "run_id": "6fcb99610b4f4cc6a7ae12581bccea1a",
+  "pr_auc": 0.857607863173895,
+  "f1_positive": 0.8673469387755102,
+  "precision_positive": 0.8585858585858586,
+  "recall_positive": 0.8762886597938144,
+  "threshold": 0.7905054092407227,
+  "n_test_samples": 56960,
+  "n_fraud_in_test": 97
+}

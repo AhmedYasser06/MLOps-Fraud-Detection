@@ -1,0 +1,42 @@
+# Two required stages: train -> evaluate.
+
+stages:
+  # prepare:
+  #   cmd: python -m src.pipeline_stages.prepare --config configs/config.yml
+  #   wdir: ..
+  #   deps:
+  #     - data/raw/creditcard.csv
+  #     - src/pipeline_stages/prepare.py
+  #   outs:
+  #     - data/split/train.csv
+  #     - data/split/val.csv
+  #     - data/split/test.csv
+
+  train:
+    cmd: python -m src.train_mlflow --config configs/config.yml --trainer configs/trainer_config.yml
+    wdir: ..
+    deps:
+      - data/split/train.csv
+      - data/split/val.csv
+      - configs/config.yml
+      - configs/trainer_config.yml
+      - src/train_mlflow.py
+      - src/trainer.py
+    params:
+      - configs/trainer_config.yml:
+          - trainer.Logistic_Regression.parameters
+          - trainer.Random_forest.parameters
+          - trainer.Neural_Network.parameters
+    outs:
+      - reports/last_run_id.txt
+
+  evaluate:
+    cmd: python -m src.pipeline_stages.evaluate --run-id-file reports/last_run_id.txt
+    wdir: ..
+    deps:
+      - reports/last_run_id.txt
+      - data/split/test.csv
+      - src/pipeline_stages/evaluate.py
+    metrics:
+      - reports/metrics.json:
+          cache: false
