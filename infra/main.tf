@@ -20,6 +20,11 @@ resource "docker_image" "minio" {
 
 resource "docker_image" "mlflow" {
   name = var.mlflow_image
+
+  build {
+    context    = "${path.module}/../mlflow"
+    dockerfile = "Dockerfile"
+  }
 }
 
 resource "docker_container" "postgres" {
@@ -41,8 +46,8 @@ resource "docker_container" "postgres" {
 }
 
 resource "docker_container" "minio" {
-  name  = "fraud-detection-minio"
-  image = docker_image.minio.image_id
+  name    = "fraud-detection-minio"
+  image   = docker_image.minio.image_id
   command = ["server", "/data", "--console-address", ":9001"]
   networks_advanced {
     name = docker_network.mlops_net.name
@@ -71,9 +76,9 @@ resource "docker_image" "minio_mc" {
 }
 
 resource "docker_container" "minio_init" {
-  name       = "fraud-detection-minio-init"
-  image      = docker_image.minio_mc.image_id
-  must_run   = false  # one-shot: create the bucket, then exit
+  name     = "fraud-detection-minio-init"
+  image    = docker_image.minio_mc.image_id
+  must_run = false # one-shot: create the bucket, then exit
   networks_advanced {
     name = docker_network.mlops_net.name
   }
@@ -106,6 +111,6 @@ resource "docker_container" "mlflow" {
     internal = 5000
     external = 5000
   }
-  restart      = "unless-stopped"
-  depends_on   = [docker_container.postgres, docker_container.minio, docker_container.minio_init]
+  restart    = "unless-stopped"
+  depends_on = [docker_container.postgres, docker_container.minio, docker_container.minio_init]
 }

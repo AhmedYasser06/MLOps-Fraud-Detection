@@ -215,3 +215,7 @@ models/*_mlflow/
 # Local Python dependency snapshot
 requirements_frozen.txt
 
+# Terraform generated state/cache
+infra/.terraform/
+infra/terraform.tfstate
+infra/terraform.tfstate.*
