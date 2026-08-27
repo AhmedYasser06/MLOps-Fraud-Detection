@@ -162,3 +162,39 @@ def predict_voting_classifier(request: PredictionRequest):
             status_code=400,
             detail=str(e),
         )
+        
+        
+# --------------------------------------------------
+# Module 2 — production model, loaded by MLflow registry stage
+# --------------------------------------------------
+# Loaded once at startup, same as the .pkl models above — never per-request.
+# This is what changes served predictions when you promote a new model
+
+_production_model = None
+try:
+    from src.predict_registry import load_production_model
+
+    _production_model = load_production_model()
+except Exception as _e:  # MLflow server not reachable — degrade gracefully
+    print(f"[startup] Could not load Production model from MLflow registry: {_e}")
+
+
+@app.post("/predict/production")
+def predict_production(request: PredictionRequest):
+    if _production_model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Production model not loaded — is the MLflow tracking server reachable?",
+        )
+    try:
+        X = np.array(request.features, dtype=float).reshape(1, -1)
+        result = _production_model.predict(X)
+        return {
+            "model": "production",
+            "prediction": int(result["prediction"][0]),
+            "fraud": bool(result["prediction"][0]),
+            "probability": float(result["probability"][0]),
+            "threshold": float(result["threshold"]),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

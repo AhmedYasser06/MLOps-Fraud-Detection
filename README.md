@@ -144,15 +144,44 @@ The image installs dependencies via `uv sync --frozen`, then copies in `src/`, `
 
 `notebooks/eda.ipynb` contains the exploratory data analysis behind the preprocessing and modeling choices above (class imbalance, feature distributions, correlation structure).
 
+## Module 2 — tracking, versioning, automation
+
+Adds MLflow experiment tracking, a model registry, DVC data versioning, CI/CD
+with a quality gate, Terraform-provisioned infra, and a continuous-training
+workflow — on top of the training code above, without changing it.
+
+```bash
+# 1. Bring up MLflow + Postgres + MinIO
+docker compose up -d postgres minio minio-init mlflow
+
+# 2. Track a full run: 3 model families (LR baseline, XGBoost, PyTorch MLP)
+#    plus your existing Random Forest / sklearn MLP as bonus runs
+cp .env.example .env
+pip install -e ".[dev]"
+python -m src.train_mlflow --config configs/config.yml --trainer configs/trainer_config.yml
+
+# 3. Open the MLflow UI, sort by pr_auc, pick your best run, register it
+open http://localhost:5000
+python -m src.registry register --run-id <best_run_id> --name fraud-detector
+# then walk it through Staging -> Production once by hand in the UI
+
+# 4. The API now serves whatever is in Production, loaded by stage — not by path
+uv run uvicorn src.api.main:app --reload --port 8000
+curl -X POST localhost:8000/predict/production -H "Content-Type: application/json" \
+  -d '{"features": [...]}'
+```
+
+See `reports/module-2.md` for the full write-up and `pipelines/dvc.yaml` /
+`.github/workflows/` for the reproducible pipeline and CI/CT automation.
+
 ## Roadmap
 
-This repo currently covers packaging, training, and a served, containerized API. Planned next steps toward a fuller MLOps setup:
-
-- [ ] Experiment tracking (MLflow) across model families and hyperparameter sweeps
-- [ ] Data/model versioning (DVC) for the dataset and serialized artifacts
-- [ ] Automated tests (`pytest`) and a CI pipeline (lint → test → build → push)
-- [ ] Load testing and latency benchmarking of the served endpoints
-- [ ] Monitoring for data/prediction drift on incoming transaction features
+- [x] Experiment tracking (MLflow) across model families and hyperparameter sweeps
+- [x] Data/model versioning (DVC) for the dataset and serialized artifacts
+- [x] Automated tests (`pytest`) and a CI pipeline (lint → test → gate → build → push)
+- [x] Continuous training with schedule / manual / webhook triggers and a human-approved Production gate
+- [ ] Load testing and latency benchmarking of the served endpoints (Module 3)
+- [ ] Monitoring for data/prediction drift on incoming transaction features (Module 5)
 
 ## License
 
