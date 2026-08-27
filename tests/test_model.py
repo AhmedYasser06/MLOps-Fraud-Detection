@@ -33,14 +33,20 @@ def test_train_random_forest_uses_config_params(sample_data, base_trainer_config
         trainer, "evaluate_model", return_value=(fake_comparison, 0.42)
     ) as mock_eval:
         result = trainer.train_random_forest(
-            X_train, y_train, X_val, y_val,
+            X_train,
+            y_train,
+            X_val,
+            y_val,
             random_seed=42,
             model_comparison={},
             trainer=base_trainer_config,
         )
 
     assert isinstance(result["model"], RandomForestClassifier)
-    assert result["parameters"] == base_trainer_config["trainer"]["Random_forest"]["parameters"]
+    assert (
+        result["parameters"]
+        == base_trainer_config["trainer"]["Random_forest"]["parameters"]
+    )
     assert result["threshold"] == 0.42
     # model was actually fit on the training data
     assert result["model"].n_estimators == 5
@@ -58,10 +64,17 @@ def test_train_random_forest_randomized_search_overrides_config_params(
     mock_search = MagicMock()
     mock_search.best_params_ = best_params
 
-    with patch.object(trainer, "evaluate_model", return_value=({}, 0.5)), \
-         patch.object(trainer, "RandomizedSearchCV", return_value=mock_search) as mock_rscv:
+    with (
+        patch.object(trainer, "evaluate_model", return_value=({}, 0.5)),
+        patch.object(
+            trainer, "RandomizedSearchCV", return_value=mock_search
+        ) as mock_rscv,
+    ):
         result = trainer.train_random_forest(
-            X_train, y_train, X_val, y_val,
+            X_train,
+            y_train,
+            X_val,
+            y_val,
             random_seed=42,
             model_comparison={},
             trainer=config,
@@ -79,7 +92,10 @@ def test_train_knn_uses_config_params(sample_data, base_trainer_config):
 
     with patch.object(trainer, "evaluate_model", return_value=({}, 0.5)) as mock_eval:
         result = trainer.train_knn(
-            X_train, y_train, X_val, y_val,
+            X_train,
+            y_train,
+            X_val,
+            y_val,
             random_seed=42,
             model_comparison={},
             trainer=base_trainer_config,
@@ -93,7 +109,9 @@ def test_train_knn_uses_config_params(sample_data, base_trainer_config):
     mock_eval.assert_called_once()
 
 
-def test_train_knn_grid_search_overrides_config_params(sample_data, base_trainer_config):
+def test_train_knn_grid_search_overrides_config_params(
+    sample_data, base_trainer_config
+):
     X_train, y_train, X_val, y_val = sample_data
     config = copy.deepcopy(base_trainer_config)
     config["trainer"]["KNN"]["grid_search"] = True
@@ -102,10 +120,15 @@ def test_train_knn_grid_search_overrides_config_params(sample_data, base_trainer
     mock_search = MagicMock()
     mock_search.best_params_ = best_params
 
-    with patch.object(trainer, "evaluate_model", return_value=({}, 0.5)), \
-         patch.object(trainer, "RandomizedSearchCV", return_value=mock_search):
+    with (
+        patch.object(trainer, "evaluate_model", return_value=({}, 0.5)),
+        patch.object(trainer, "RandomizedSearchCV", return_value=mock_search),
+    ):
         result = trainer.train_knn(
-            X_train, y_train, X_val, y_val,
+            X_train,
+            y_train,
+            X_val,
+            y_val,
             random_seed=42,
             model_comparison={},
             trainer=config,
@@ -122,14 +145,20 @@ def test_train_logistic_regression_uses_config_params(sample_data, base_trainer_
 
     with patch.object(trainer, "evaluate_model", return_value=({}, 0.37)) as mock_eval:
         result = trainer.train_logistic_regression(
-            X_train, y_train, X_val, y_val,
+            X_train,
+            y_train,
+            X_val,
+            y_val,
             random_seed=42,
             model_comparison={},
             trainer=base_trainer_config,
         )
 
     assert isinstance(result["model"], LogisticRegression)
-    assert result["parameters"] == base_trainer_config["trainer"]["Logistic_Regression"]["parameters"]
+    assert (
+        result["parameters"]
+        == base_trainer_config["trainer"]["Logistic_Regression"]["parameters"]
+    )
     assert result["threshold"] == 0.37
     mock_eval.assert_called_once()
 
@@ -145,10 +174,15 @@ def test_train_logistic_regression_grid_search_overrides_config_params(
     mock_search = MagicMock()
     mock_search.best_params_ = best_params
 
-    with patch.object(trainer, "evaluate_model", return_value=({}, 0.5)), \
-         patch.object(trainer, "GridSearchCV", return_value=mock_search):
+    with (
+        patch.object(trainer, "evaluate_model", return_value=({}, 0.5)),
+        patch.object(trainer, "GridSearchCV", return_value=mock_search),
+    ):
         result = trainer.train_logistic_regression(
-            X_train, y_train, X_val, y_val,
+            X_train,
+            y_train,
+            X_val,
+            y_val,
             random_seed=42,
             model_comparison={},
             trainer=config,
@@ -169,7 +203,10 @@ def test_train_neural_network_parses_hidden_layer_sizes_string(
 
     with patch.object(trainer, "evaluate_model", return_value=({}, 0.5)) as mock_eval:
         result = trainer.train_neural_network(
-            X_train, y_train, X_val, y_val,
+            X_train,
+            y_train,
+            X_val,
+            y_val,
             random_seed=42,
             model_comparison={},
             trainer=base_trainer_config,
@@ -192,11 +229,16 @@ def test_train_neural_network_randomized_search_uses_best_params(
     mock_search = MagicMock()
     mock_search.best_params_ = best_params
 
-    with patch.object(trainer, "evaluate_model", return_value=({}, 0.5)), \
-         patch.object(trainer, "MLPClassifier", wraps=MLPClassifier) as mock_mlp, \
-         patch.object(trainer, "RandomizedSearchCV", return_value=mock_search):
+    with (
+        patch.object(trainer, "evaluate_model", return_value=({}, 0.5)),
+        patch.object(trainer, "MLPClassifier", wraps=MLPClassifier) as mock_mlp,
+        patch.object(trainer, "RandomizedSearchCV", return_value=mock_search),
+    ):
         trainer.train_neural_network(
-            X_train, y_train, X_val, y_val,
+            X_train,
+            y_train,
+            X_val,
+            y_val,
             random_seed=42,
             model_comparison={},
             trainer=config,
@@ -210,7 +252,9 @@ def test_train_neural_network_randomized_search_uses_best_params(
 def fitted_submodels(sample_data):
     X_train, y_train, _, _ = sample_data
     lr = LogisticRegression(max_iter=200).fit(X_train, y_train)
-    mlp = MLPClassifier(hidden_layer_sizes=(4,), max_iter=50, random_state=42).fit(X_train, y_train)
+    mlp = MLPClassifier(hidden_layer_sizes=(4,), max_iter=50, random_state=42).fit(
+        X_train, y_train
+    )
     rf = RandomForestClassifier(n_estimators=5, random_state=42).fit(X_train, y_train)
     return {
         "Logistic_Regression": {"model": lr},
@@ -227,7 +271,10 @@ def test_train_voting_classifier_missing_models_raises_value_error(
 
     with pytest.raises(ValueError, match="missing"):
         trainer.train_voting_classifier(
-            X_train, y_train, X_val, y_val,
+            X_train,
+            y_train,
+            X_val,
+            y_val,
             models=incomplete_models,
             random_seed=42,
             model_comparison={},
@@ -242,7 +289,10 @@ def test_train_voting_classifier_success(
 
     with patch.object(trainer, "evaluate_model", return_value=({}, 0.5)) as mock_eval:
         result = trainer.train_voting_classifier(
-            X_train, y_train, X_val, y_val,
+            X_train,
+            y_train,
+            X_val,
+            y_val,
             models=fitted_submodels,
             random_seed=42,
             model_comparison={},
@@ -250,7 +300,10 @@ def test_train_voting_classifier_success(
         )
 
     assert result["model"] is not None
-    assert result["parameters"] == base_trainer_config["trainer"]["Voting_Classifier"]["parameters"]
+    assert (
+        result["parameters"]
+        == base_trainer_config["trainer"]["Voting_Classifier"]["parameters"]
+    )
     mock_eval.assert_called_once()
     # sanity check the ensemble can actually produce predictions
     preds = result["model"].predict(X_val)
@@ -262,12 +315,13 @@ def test_train_voting_classifier_init_failure_wrapped_as_runtime_error(
 ):
     X_train, y_train, X_val, y_val = sample_data
 
-    with patch.object(
-        trainer, "EnsembleVoteClassifier", side_effect=Exception("boom")
-    ):
+    with patch.object(trainer, "EnsembleVoteClassifier", side_effect=Exception("boom")):
         with pytest.raises(RuntimeError, match="Failed to initialize"):
             trainer.train_voting_classifier(
-                X_train, y_train, X_val, y_val,
+                X_train,
+                y_train,
+                X_val,
+                y_val,
                 models=fitted_submodels,
                 random_seed=42,
                 model_comparison={},

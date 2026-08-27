@@ -2,12 +2,14 @@
 Shared fixtures for testing src/trainer.py.
 
 """
+
 import sys
 import types
 from unittest.mock import MagicMock
 
 import pytest
 from sklearn.datasets import make_classification
+
 
 def _stub_module(name):
     if name in sys.modules:

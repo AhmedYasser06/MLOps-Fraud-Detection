@@ -51,6 +51,7 @@ app = FastAPI(
 # Request schema
 # --------------------------------------------------
 
+
 class PredictionRequest(BaseModel):
     features: list[float]
 
@@ -58,6 +59,7 @@ class PredictionRequest(BaseModel):
 # --------------------------------------------------
 # Health check
 # --------------------------------------------------
+
 
 @app.get("/")
 def root():
@@ -82,6 +84,7 @@ def health():
 # --------------------------------------------------
 # Random Forest prediction
 # --------------------------------------------------
+
 
 @app.post("/predict/random-forest")
 def predict_random_forest(request: PredictionRequest):
@@ -111,6 +114,7 @@ def predict_random_forest(request: PredictionRequest):
 # Neural Network prediction
 # --------------------------------------------------
 
+
 @app.post("/predict/neural-network")
 def predict_neural_network(request: PredictionRequest):
     try:
@@ -136,9 +140,11 @@ def predict_neural_network(request: PredictionRequest):
             detail=str(e),
         )
 
+
 # --------------------------------------------------
 # Voting Classifier prediction
 # --------------------------------------------------
+
 
 @app.post("/predict/voting-classifier")
 def predict_voting_classifier(request: PredictionRequest):

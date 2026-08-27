@@ -15,32 +15,42 @@ from sklearn.neighbors import KNeighborsClassifier
 from mlxtend.classifier import EnsembleVoteClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import RobustScaler
-from sklearn.model_selection import GridSearchCV , StratifiedKFold , RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, RandomizedSearchCV
 from sklearn.metrics import make_scorer, f1_score
 
 
-def train_random_forest(X_train, y_train, X_val, y_val, random_seed, model_comparison, trainer):
+def train_random_forest(
+    X_train, y_train, X_val, y_val, random_seed, model_comparison, trainer
+):
 
-    if trainer['trainer']['Random_forest']['Randomized_Search'] == True:
+    if trainer["trainer"]["Random_forest"]["Randomized_Search"] == True:
         param_distributions = {
-            'n_estimators': [200, 400, 600 ,800],
-            'min_samples_leaf': [2, 5, 10, 15],
-            'min_samples_split': [5, 10, 20],
-            'class_weight': [{0: 0.20, 1: 0.80}, 'balanced_subsample', {0: 0.15, 1: 0.85}],
+            "n_estimators": [200, 400, 600, 800],
+            "min_samples_leaf": [2, 5, 10, 15],
+            "min_samples_split": [5, 10, 20],
+            "class_weight": [
+                {0: 0.20, 1: 0.80},
+                "balanced_subsample",
+                {0: 0.15, 1: 0.85},
+            ],
         }
 
-        stratified_kfold = StratifiedKFold(n_splits=3, shuffle=True, random_state=random_seed)
+        stratified_kfold = StratifiedKFold(
+            n_splits=3, shuffle=True, random_state=random_seed
+        )
         scorer = make_scorer(f1_score, pos_label=1)
 
         random_search = RandomizedSearchCV(
-            estimator=RandomForestClassifier(n_jobs=-1, bootstrap=True, random_state=random_seed),
+            estimator=RandomForestClassifier(
+                n_jobs=-1, bootstrap=True, random_state=random_seed
+            ),
             param_distributions=param_distributions,
             scoring=scorer,
             cv=stratified_kfold,
             n_iter=20,
             n_jobs=-1,
             verbose=2,
-            random_state=random_seed
+            random_state=random_seed,
         )
 
         random_search.fit(X_train, y_train)
@@ -48,31 +58,39 @@ def train_random_forest(X_train, y_train, X_val, y_val, random_seed, model_compa
         parameters = random_search.best_params_
         print("Best Hyperparameters for Random Forest:", parameters)
     else:
-        parameters = trainer['trainer']['Random_forest']['parameters']
+        parameters = trainer["trainer"]["Random_forest"]["parameters"]
 
-
-    rf = RandomForestClassifier(
-        **parameters,
-        random_state=random_seed
-    )
+    rf = RandomForestClassifier(**parameters, random_state=random_seed)
 
     rf.fit(X_train, y_train)
 
-    model_comparison , optimal_threshold = evaluate_model(rf, model_comparison, path, 'Random Forest', X_train, y_train, X_val, y_val, trainer['evaluation'])
+    model_comparison, optimal_threshold = evaluate_model(
+        rf,
+        model_comparison,
+        path,
+        "Random Forest",
+        X_train,
+        y_train,
+        X_val,
+        y_val,
+        trainer["evaluation"],
+    )
 
-    return {"model": rf ,  "parameters": parameters, "threshold": optimal_threshold}
+    return {"model": rf, "parameters": parameters, "threshold": optimal_threshold}
 
 
 def train_knn(X_train, y_train, X_val, y_val, random_seed, model_comparison, trainer):
 
-    if trainer['trainer']['KNN']['grid_search'] == True:
+    if trainer["trainer"]["KNN"]["grid_search"] == True:
         param_distributions = {
-            'n_neighbors': [3, 5, 7, 9, 11, 13, 15, 17],
-            'weights': ['uniform', 'distance'],
-            'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute'],
+            "n_neighbors": [3, 5, 7, 9, 11, 13, 15, 17],
+            "weights": ["uniform", "distance"],
+            "algorithm": ["auto", "ball_tree", "kd_tree", "brute"],
         }
 
-        stratified_kfold = StratifiedKFold(n_splits=3, shuffle=True, random_state=random_seed)
+        stratified_kfold = StratifiedKFold(
+            n_splits=3, shuffle=True, random_state=random_seed
+        )
         scorer = make_scorer(f1_score, pos_label=1)
 
         random_search = RandomizedSearchCV(
@@ -83,7 +101,7 @@ def train_knn(X_train, y_train, X_val, y_val, random_seed, model_comparison, tra
             n_iter=20,
             n_jobs=-1,
             verbose=2,
-            random_state=random_seed
+            random_state=random_seed,
         )
 
         random_search.fit(X_train, y_train)
@@ -91,89 +109,119 @@ def train_knn(X_train, y_train, X_val, y_val, random_seed, model_comparison, tra
         parameters = random_search.best_params_
         print("Best Hyperparameters for KNN:", parameters)
     else:
-        parameters = trainer['trainer']['KNN']['parameters']
-
+        parameters = trainer["trainer"]["KNN"]["parameters"]
 
     knn = KNeighborsClassifier(**parameters, n_jobs=-1)
 
     knn.fit(X_train, y_train)
 
-    model_comparison , _ = evaluate_model(knn, model_comparison, path, 'KNN', X_train, y_train, X_val, y_val, trainer['evaluation'])
+    model_comparison, _ = evaluate_model(
+        knn,
+        model_comparison,
+        path,
+        "KNN",
+        X_train,
+        y_train,
+        X_val,
+        y_val,
+        trainer["evaluation"],
+    )
 
-    return {"model": knn , "parameters": parameters}
+    return {"model": knn, "parameters": parameters}
 
 
-
-def train_logistic_regression(X_train_scaled, y_train, X_val_scaled, y_val, random_seed, model_comparison,  trainer):
+def train_logistic_regression(
+    X_train_scaled, y_train, X_val_scaled, y_val, random_seed, model_comparison, trainer
+):
 
     best_params = {}
 
-    if trainer['trainer']['Logistic_Regression']['grid_search'] == True:
-             param_grid = {
-                            'C':            [0.1, 1.0, 10.0],
-                            'penalty':      ['l2'],
-                            'class_weight': ['balanced', None, {0: 0.35, 1: 0.65}, {0: 0.25, 1: 0.75}, {0: 0.15, 1: 0.85}],
-                            'solver':       ['sag', 'lbfgs', 'saga', ' newton-cg'],
-                            'max_iter':     [400, 500, 600, 800],
-                        }
+    if trainer["trainer"]["Logistic_Regression"]["grid_search"] == True:
+        param_grid = {
+            "C": [0.1, 1.0, 10.0],
+            "penalty": ["l2"],
+            "class_weight": [
+                "balanced",
+                None,
+                {0: 0.35, 1: 0.65},
+                {0: 0.25, 1: 0.75},
+                {0: 0.15, 1: 0.85},
+            ],
+            "solver": ["sag", "lbfgs", "saga", " newton-cg"],
+            "max_iter": [400, 500, 600, 800],
+        }
 
-             lr = LogisticRegression()
-             scorer = make_scorer(f1_score, pos_label=1)
+        lr = LogisticRegression()
+        scorer = make_scorer(f1_score, pos_label=1)
 
-             stratified_kfold = StratifiedKFold(n_splits=5,
-                                            shuffle=True,
-                                            random_state=42)
+        stratified_kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-             grid_search = GridSearchCV(lr,
-                                    param_grid,cv=stratified_kfold,
-                                    scoring=scorer,
-                                    n_jobs=-1)
+        grid_search = GridSearchCV(
+            lr, param_grid, cv=stratified_kfold, scoring=scorer, n_jobs=-1
+        )
 
-             grid_search.fit(X_train_scaled, y_train)
+        grid_search.fit(X_train_scaled, y_train)
 
-             best_params = grid_search.best_params_
-             print("Best Hyperparameters:", best_params)
-
+        best_params = grid_search.best_params_
+        print("Best Hyperparameters:", best_params)
 
     else:
-        best_params = trainer['trainer']['Logistic_Regression']['parameters']
-
+        best_params = trainer["trainer"]["Logistic_Regression"]["parameters"]
 
     lr = LogisticRegression(**best_params, random_state=random_seed)
     lr.fit(X_train_scaled, y_train)
 
-    model_comparison , optimal_threshold = evaluate_model(lr, model_comparison, path, 'Logistic Regression', X_train_scaled, y_train, X_val_scaled, y_val, trainer['evaluation'])
+    model_comparison, optimal_threshold = evaluate_model(
+        lr,
+        model_comparison,
+        path,
+        "Logistic Regression",
+        X_train_scaled,
+        y_train,
+        X_val_scaled,
+        y_val,
+        trainer["evaluation"],
+    )
 
-    return {"model": lr , "parameters": best_params, "threshold": optimal_threshold}
+    return {"model": lr, "parameters": best_params, "threshold": optimal_threshold}
 
 
-
-def train_neural_network(X_train_scaled, y_train, X_val_scaled, y_val, random_seed, model_comparison,  trainer):
+def train_neural_network(
+    X_train_scaled, y_train, X_val_scaled, y_val, random_seed, model_comparison, trainer
+):
 
     best_params = {}
 
-    if trainer['trainer']['Neural_Network']['Randomized_Search'] == True:
+    if trainer["trainer"]["Neural_Network"]["Randomized_Search"] == True:
         param_dist = {
-        'activation': ['relu'],
-        'hidden_layer_sizes': [
-            (30, 20),
-            (30, 20, 10),
-            (40, 30, 20),
-            (64, 32, 16),
-            (64, 32, 32, 16)
-        ],
-        'solver': ['adam', 'sgd'],
-        'batch_size': [64, 128, 512],
-        'learning_rate_init': [0.001, 0.01, 0.1],
-        'alpha': [0.001, 0.01, 0.025],
-        'max_iter': [500, 800, 1000, 2000],
-        'random_state': [random_seed]
+            "activation": ["relu"],
+            "hidden_layer_sizes": [
+                (30, 20),
+                (30, 20, 10),
+                (40, 30, 20),
+                (64, 32, 16),
+                (64, 32, 32, 16),
+            ],
+            "solver": ["adam", "sgd"],
+            "batch_size": [64, 128, 512],
+            "learning_rate_init": [0.001, 0.01, 0.1],
+            "alpha": [0.001, 0.01, 0.025],
+            "max_iter": [500, 800, 1000, 2000],
+            "random_state": [random_seed],
         }
 
         MLP_CV = MLPClassifier()
         scorer = make_scorer(f1_score, pos_label=1)
         cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=random_seed)
-        random_search = RandomizedSearchCV(MLP_CV, param_distributions=param_dist, n_iter=30, cv=cv, scoring=scorer, n_jobs=-1, random_state=random_seed)
+        random_search = RandomizedSearchCV(
+            MLP_CV,
+            param_distributions=param_dist,
+            n_iter=30,
+            cv=cv,
+            scoring=scorer,
+            n_jobs=-1,
+            random_state=random_seed,
+        )
         random_search.fit(X_train_scaled, y_train)
 
         best_params = random_search.best_params_
@@ -181,114 +229,197 @@ def train_neural_network(X_train_scaled, y_train, X_val_scaled, y_val, random_se
 
     else:
         # load parameters from config file
-        best_params = trainer['trainer']['Neural_Network']['parameters']
+        best_params = trainer["trainer"]["Neural_Network"]["parameters"]
 
         MLP = MLPClassifier(
-            hidden_layer_sizes=eval(best_params['hidden_layer_sizes']), # eval to convert string to tuple
-            activation=best_params['activation'],
-            solver=best_params['solver'],
-            alpha=best_params['alpha'],
-            batch_size=best_params['batch_size'],
-            learning_rate_init=best_params['learning_rate_init'],
-            max_iter=best_params['max_iter'],
-            random_state=random_seed
+            hidden_layer_sizes=eval(
+                best_params["hidden_layer_sizes"]
+            ),  # eval to convert string to tuple
+            activation=best_params["activation"],
+            solver=best_params["solver"],
+            alpha=best_params["alpha"],
+            batch_size=best_params["batch_size"],
+            learning_rate_init=best_params["learning_rate_init"],
+            max_iter=best_params["max_iter"],
+            random_state=random_seed,
         )
 
     MLP.fit(X_train_scaled, y_train)
 
-    model_comparison, optimal_threshold = evaluate_model(MLP, model_comparison, path, 'Neural Network', X_train_scaled, y_train, X_val_scaled, y_val, trainer['evaluation'])
+    model_comparison, optimal_threshold = evaluate_model(
+        MLP,
+        model_comparison,
+        path,
+        "Neural Network",
+        X_train_scaled,
+        y_train,
+        X_val_scaled,
+        y_val,
+        trainer["evaluation"],
+    )
 
-    return {"model": MLP ,  "parameters": best_params, "threshold": optimal_threshold}
+    return {"model": MLP, "parameters": best_params, "threshold": optimal_threshold}
 
-def train_voting_classifier(X_train, y_train, x_val, y_val, models, random_seed, model_comparison, trainer):
+
+def train_voting_classifier(
+    X_train, y_train, x_val, y_val, models, random_seed, model_comparison, trainer
+):
     scaler = RobustScaler()
-    X_train_scaled = scaler.fit_transform(X_train)  # make scaler learn statistics from training data
-    param = trainer['trainer']['Voting_Classifier']['parameters']
+    X_train_scaled = scaler.fit_transform(
+        X_train
+    )  # make scaler learn statistics from training data
+    param = trainer["trainer"]["Voting_Classifier"]["parameters"]
 
     # Ensure models are present in the provided dictionary
-    required_models = ['Logistic_Regression', 'Neural_Network', 'Random_forest']
+    required_models = ["Logistic_Regression", "Neural_Network", "Random_forest"]
     missing_models = [model for model in required_models if model not in models]
 
     if missing_models:
-        raise ValueError(f"The following required models are missing: {', '.join(missing_models)}")
+        raise ValueError(
+            f"The following required models are missing: {', '.join(missing_models)}"
+        )
 
     try:
         voting_classifier = EnsembleVoteClassifier(
             clfs=[
-                make_pipeline(scaler, models['Logistic_Regression']['model']),
-                make_pipeline(scaler, models['Neural_Network']['model']),
-                models['Random_forest']['model'],
+                make_pipeline(scaler, models["Logistic_Regression"]["model"]),
+                make_pipeline(scaler, models["Neural_Network"]["model"]),
+                models["Random_forest"]["model"],
             ],
-            weights=param['weights'],
-            fit_base_estimators=param['fit_base_estimators'],
-            use_clones=param['use_clones'],
-            voting=param['voting'],
+            weights=param["weights"],
+            fit_base_estimators=param["fit_base_estimators"],
+            use_clones=param["use_clones"],
+            voting=param["voting"],
         )
     except Exception as e:
         raise RuntimeError(f"Failed to initialize the voting classifier: {e}")
 
+    voting_classifier.fit(X_train, y_train)  #  no refiting required here
 
-    voting_classifier.fit(X_train, y_train) #  no refiting required here
+    model_comparison, optimal_threshold = evaluate_model(
+        voting_classifier,
+        model_comparison,
+        path,
+        "Voting Classifier",
+        X_train,
+        y_train,
+        x_val,
+        y_val,
+        trainer["evaluation"],
+    )
 
-    model_comparison, optimal_threshold = evaluate_model(voting_classifier, model_comparison, path, 'Voting Classifier', X_train, y_train, x_val, y_val, trainer['evaluation'])
-
-    return {"model": voting_classifier , "parameters": param, "threshold": optimal_threshold}
-
+    return {
+        "model": voting_classifier,
+        "parameters": param,
+        "threshold": optimal_threshold,
+    }
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config",  help="path to the dataset and preprocessing config file", default="configs/config.yml")
-    parser.add_argument("--trainer", help="path to trainer and evaluation config file", default="configs/trainer_config.yml")
+    parser.add_argument(
+        "--config",
+        help="path to the dataset and preprocessing config file",
+        default="configs/config.yml",
+    )
+    parser.add_argument(
+        "--trainer",
+        help="path to trainer and evaluation config file",
+        default="configs/trainer_config.yml",
+    )
     args = parser.parse_args()
 
-    config =  load_config(args.config)
+    config = load_config(args.config)
     trainer = load_config(args.trainer)
 
-    RANDOM_SEED = config['random_seed']
+    RANDOM_SEED = config["random_seed"]
     np.random.seed(RANDOM_SEED)
 
     X_train, y_train, X_val, y_val = load_data(config)
-    X_train_scaled, X_val_scaled = scale_data(X_train, X_val, config['preprocessing']['scaler_type'])
+    X_train_scaled, X_val_scaled = scale_data(
+        X_train, X_val, config["preprocessing"]["scaler_type"]
+    )
 
-    if config['balancing']['do_balance']: # balance data
-        X_train_scaled , y_train = balance_data_transformation(X_train_scaled, y_train, balance_type= config['balancing']['method'], sampling_strategy=config['balancing']['sampling_strategy'], k=5,  random_state=RANDOM_SEED)
+    if config["balancing"]["do_balance"]:  # balance data
+        X_train_scaled, y_train = balance_data_transformation(
+            X_train_scaled,
+            y_train,
+            balance_type=config["balancing"]["method"],
+            sampling_strategy=config["balancing"]["sampling_strategy"],
+            k=5,
+            random_state=RANDOM_SEED,
+        )
         X_train = X_train_scaled.copy()
 
-    model_comparison = {} # model comparison stats dictionary
-    models = {} # trained models dictionary
+    model_comparison = {}  # model comparison stats dictionary
+    models = {}  # trained models dictionary
 
     # results path for trained models and evaluation figures
     now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")
-    path = 'models/{}/'.format(now)
+    path = "models/{}/".format(now)
     if not os.path.exists(path):
         os.makedirs(path)
 
-    if trainer['trainer']['Random_forest']['train']:
-       models["Random_forest"] = train_random_forest(X_train, y_train, X_val, y_val, RANDOM_SEED , model_comparison, trainer) # Random forest does not need scaled data
+    if trainer["trainer"]["Random_forest"]["train"]:
+        models["Random_forest"] = train_random_forest(
+            X_train, y_train, X_val, y_val, RANDOM_SEED, model_comparison, trainer
+        )  # Random forest does not need scaled data
 
-    if trainer['trainer']['Logistic_Regression']['train']:
-        models['Logistic_Regression'] = train_logistic_regression(X_train_scaled, y_train, X_val_scaled, y_val, RANDOM_SEED, model_comparison, trainer)
+    if trainer["trainer"]["Logistic_Regression"]["train"]:
+        models["Logistic_Regression"] = train_logistic_regression(
+            X_train_scaled,
+            y_train,
+            X_val_scaled,
+            y_val,
+            RANDOM_SEED,
+            model_comparison,
+            trainer,
+        )
 
-    if trainer['trainer']['Neural_Network']['train']:
-        models['Neural_Network'] = train_neural_network(X_train_scaled, y_train, X_val_scaled, y_val, RANDOM_SEED, model_comparison, trainer)
+    if trainer["trainer"]["Neural_Network"]["train"]:
+        models["Neural_Network"] = train_neural_network(
+            X_train_scaled,
+            y_train,
+            X_val_scaled,
+            y_val,
+            RANDOM_SEED,
+            model_comparison,
+            trainer,
+        )
 
-    if trainer['trainer']['KNN']['train']:
-        models['KNN'] = train_knn(X_train_scaled, y_train, X_val_scaled, y_val, RANDOM_SEED, model_comparison, trainer)
+    if trainer["trainer"]["KNN"]["train"]:
+        models["KNN"] = train_knn(
+            X_train_scaled,
+            y_train,
+            X_val_scaled,
+            y_val,
+            RANDOM_SEED,
+            model_comparison,
+            trainer,
+        )
 
-    if trainer['trainer']['Voting_Classifier']['train']:
-        models['Voting_Classifier'] = train_voting_classifier(X_train, y_train, X_val, y_val, models, RANDOM_SEED, model_comparison, trainer)
+    if trainer["trainer"]["Voting_Classifier"]["train"]:
+        models["Voting_Classifier"] = train_voting_classifier(
+            X_train,
+            y_train,
+            X_val,
+            y_val,
+            models,
+            RANDOM_SEED,
+            model_comparison,
+            trainer,
+        )
 
     # Save the models
     model_path = path + "trained_models.pkl"
     joblib.dump(models, model_path)
-    print('Model saved at: {}'.format(model_path))
-    print('Evaluation plots saved at: {}evaluation/plot'.format(path))
+    print("Model saved at: {}".format(model_path))
+    print("Evaluation plots saved at: {}evaluation/plot".format(path))
 
-    if  model_comparison:
+    if model_comparison:
         # Save the model comparison
         model_comparison_path = path + "model_comparison-(validation dataset).png"
         save_model_comparison(model_comparison, model_comparison_path)
 
-        print('\nModels comparison:\n')
+        print("\nModels comparison:\n")
         print(pd.DataFrame(model_comparison).T.to_markdown())

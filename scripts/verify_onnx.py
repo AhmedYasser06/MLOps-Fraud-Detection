@@ -71,7 +71,11 @@ def main():
     all_pass &= report(
         "neural_network",
         nn.predict_proba(X_scaled),
-        run_onnx(ONNX_DIR / "neural_network.onnx", X_scaled.astype(np.float32), "probabilities"),
+        run_onnx(
+            ONNX_DIR / "neural_network.onnx",
+            X_scaled.astype(np.float32),
+            "probabilities",
+        ),
     )
 
     voting = joblib.load(MODELS_DIR / "Voting_Classifier.pkl")["model"]
@@ -81,7 +85,14 @@ def main():
         run_onnx(ONNX_DIR / "voting_classifier.onnx", X, "probabilities"),
     )
 
-    print("\n" + ("All models verified against sklearn." if all_pass else "Some models FAILED verification."))
+    print(
+        "\n"
+        + (
+            "All models verified against sklearn."
+            if all_pass
+            else "Some models FAILED verification."
+        )
+    )
     return 0 if all_pass else 1
 
 

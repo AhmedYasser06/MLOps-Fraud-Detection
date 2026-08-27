@@ -6,6 +6,7 @@ from src.helper_utils import *
 from src.data_utils import *
 from torch.utils.tensorboard import SummaryWriter
 
+
 class FocalLoss(nn.Module):
     def __init__(self, gamma=2, alpha=0.25):
         # focal loss : https://leimao.github.io/blog/Focal-Loss-Explained/
@@ -14,12 +15,15 @@ class FocalLoss(nn.Module):
         self.alpha = alpha
 
     def forward(self, pred_logits, target):
-        BCELoss = F.binary_cross_entropy_with_logits(pred_logits, target, reduction='none')
+        BCELoss = F.binary_cross_entropy_with_logits(
+            pred_logits, target, reduction="none"
+        )
         prob = pred_logits.sigmoid()
         alpha_t = torch.where(target == 1, self.alpha, (1 - self.alpha))
-        pt =  torch.where(target == 1, prob, 1 - prob)
+        pt = torch.where(target == 1, prob, 1 - prob)
         loss = alpha_t * ((1 - pt) ** self.gamma) * BCELoss
         return loss.sum()
+
 
 class FraudDetectionNN(nn.Module):
     def __init__(self):
@@ -34,7 +38,6 @@ class FraudDetectionNN(nn.Module):
         self.tanh = nn.Tanh()
         self.dorpout = nn.Dropout(0.5)
 
-
     def forward(self, x):
         x = self.tanh(self.bn1(self.hidden1(x)))
         x = self.dorpout(x)
@@ -44,34 +47,34 @@ class FraudDetectionNN(nn.Module):
         x = self.output(x)
         return x
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
 
     config = load_config("config/config.yml")
-    torch.manual_seed(config['random_seed'])
+    torch.manual_seed(config["random_seed"])
 
     X_train, y_train, X_val, y_val = load_data(config)
-    X_train, X_val = scale_data(X_train, X_val, scaler_type='robust')
+    X_train, X_val = scale_data(X_train, X_val, scaler_type="robust")
 
     # uncomment if you want to balance data using-over-sampling
     # print("Nig: ", len(y_train[y_train == 0])," Pos: ",len(y_train[y_train == 1]))
     # X_train, y_train = balance_data_transformation(X_train, y_train, balance_type='over',sampling_strategy={0: len(y_train[y_train == 0]), 1:  3500}, random_state=config['random_seed'])
     # print("Nig: ",len(y_train[y_train == 0])," Pos: ",len(y_train[y_train == 1]))
 
-
     model = FraudDetectionNN()
-    alpha = 0.75 # (rate to make balance class)
-    gamma = 2 # (focusing on hard samples "minority class")
+    alpha = 0.75  # (rate to make balance class)
+    gamma = 2  # (focusing on hard samples "minority class")
     lr = 0.001
 
     criterion = FocalLoss(alpha=alpha, gamma=gamma)
-    optimizer =  torch.optim.SGD(model.parameters(), lr=lr)
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
 
-    X_train_tensor = torch.tensor(X_train ,dtype=torch.float32)
+    X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
     y_train_tensor = torch.tensor(y_train, dtype=torch.float32).reshape(-1, 1)
     X_val_tensor = torch.tensor(X_val, dtype=torch.float32)
     y_val_tensor = torch.tensor(y_val, dtype=torch.float32).reshape(-1, 1)
 
-    batch_size = 512 # 1024 2048 4096
+    batch_size = 512  # 1024 2048 4096
     num_epochs = 450
     start_epoch = 0
 
@@ -80,7 +83,7 @@ if __name__ == '__main__':
 
     # Uncomment the line below to load from a checkpoint
     checkpoint_id = 400
-    path = f'models/focal_loss_checkpoints/checkpoint_epoch_{checkpoint_id}.pth'
+    path = f"models/focal_loss_checkpoints/checkpoint_epoch_{checkpoint_id}.pth"
     start_epoch = load_checkpoint(model, path) + 1
 
     # Training Loop
@@ -147,18 +150,25 @@ if __name__ == '__main__':
         val_output = model(X_train_tensor)
         y_train_prob = val_output.sigmoid().numpy()
         y_train_pred = (y_train_prob > 0.5).astype(int)
-        _ = eval_classification_report_confusion_matrix(y_true=y_train, y_pred=y_train_pred, title='FraudDetectionNN train')
+        _ = eval_classification_report_confusion_matrix(
+            y_true=y_train, y_pred=y_train_pred, title="FraudDetectionNN train"
+        )
         # eval_precision_recall_for_different_threshold(y_pred=y_train_prob, y_true=y_train)
 
         val_output = model(X_val_tensor)
         y_val_prob = val_output.sigmoid().numpy()
         y_val_pred = (y_val_prob > 0.50).astype(int)
-        report_val = eval_classification_report_confusion_matrix(y_true=y_val, y_pred=y_val_pred, title='FraudDetectionNN valdtion')
+        report_val = eval_classification_report_confusion_matrix(
+            y_true=y_val, y_pred=y_val_pred, title="FraudDetectionNN valdtion"
+        )
 
-
-        optimal_threshold, f1_scores = eval_best_threshold(y_pred=y_train_prob, y_true=y_train, with_repect_to="f1_score")
+        optimal_threshold, f1_scores = eval_best_threshold(
+            y_pred=y_train_prob, y_true=y_train, with_repect_to="f1_score"
+        )
         y_val_pred = (y_val_prob > optimal_threshold).astype(int)
-        report_val = eval_classification_report_confusion_matrix(y_pred=y_val_pred, y_true=y_val, title='FraudDetectionNN optimal threshold')
+        report_val = eval_classification_report_confusion_matrix(
+            y_pred=y_val_pred, y_true=y_val, title="FraudDetectionNN optimal threshold"
+        )
 
     writer.close()  # tensorboard --logdir=runs
 
