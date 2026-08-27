@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  MPLBACKEND: Agg # headless CI runners have no display; trainer.py's plots need this
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+      - run: pip install ruff black
+      - run: ruff check src tests scripts
+      - run: black --check src tests scripts
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+      - run: pip install -e ".[dev]"
+      - run: pytest -v
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+          if-no-files-found: ignore
+
+  gate:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: pip install -e ".[dev]"
+
+      - name: Check preconditions (metrics file + reachable MLflow secret)
+        id: check
+        run: |
+          if [ -f reports/metrics.json ]; then
+            echo "has_metrics=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_metrics=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -n "${{ secrets.MLFLOW_TRACKING_URI }}" ]; then
+            echo "has_mlflow=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_mlflow=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run quality gate
+        if: steps.check.outputs.has_metrics == 'true' && steps.check.outputs.has_mlflow == 'true'
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: python -m scripts.quality_gate --metrics-file reports/metrics.json
+
+      - name: Skip — no metrics.json in this PR
+        if: steps.check.outputs.has_metrics == 'false'
+        run: echo "No reports/metrics.json changed in this PR; nothing to gate. Run 'dvc repro pipelines/dvc.yaml' locally to generate one before opening the PR."
+
+      - name: Skip — MLFLOW_TRACKING_URI secret not set or not reachable from GitHub-hosted runners
+        if: steps.check.outputs.has_metrics == 'true' && steps.check.outputs.has_mlflow == 'false'
+        run: |
+          echo "::warning::MLFLOW_TRACKING_URI secret is not set, so the quality gate cannot reach your MLflow server from GitHub's cloud runner."
+          echo "A tracking server on 'localhost' is NOT reachable from GitHub-hosted runners. Either:"
+          echo "  (a) run this repo's CI on a self-hosted runner on your own machine (see the PDF guide), or"
+          echo "  (b) expose MLflow via a public URL/tunnel and set MLFLOW_TRACKING_URI as a repo secret."
+          echo "The gate is SKIPPED, not failed, so this doesn't block the PR — but it also isn't actually checking anything yet."
+
+  build:
+    runs-on: ubuntu-latest
+    needs: gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Docker Hub secrets are present
+        id: dockercheck
+        run: |
+          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] && [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: docker/setup-buildx-action@v3
+        if: steps.dockercheck.outputs.ready == 'true'
+      - uses: docker/login-action@v3
+        if: steps.dockercheck.outputs.ready == 'true'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        if: steps.dockercheck.outputs.ready == 'true'
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/fraud-detection-api:sha-${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/fraud-detection-api:latest
+      - name: Skip — Docker Hub secrets not set
+        if: steps.dockercheck.outputs.ready == 'false'
+        run: echo "::warning::DOCKERHUB_USERNAME / DOCKERHUB_TOKEN repo secrets are not set — skipping image build+push. Add them in Settings > Secrets and variables > Actions."
