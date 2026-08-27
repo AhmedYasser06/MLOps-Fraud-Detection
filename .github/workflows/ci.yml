@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 env:
   MPLBACKEND: Agg # headless CI runners have no display; trainer.py's plots need this
@@ -87,14 +88,20 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
-      - name: Check Docker Hub secrets are present
+      - name: Check Docker Hub secrets
         id: dockercheck
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] && [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
+          if [ -z "$DOCKERHUB_USERNAME" ] || [ -z "$DOCKERHUB_TOKEN" ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Docker Hub secrets are missing."
+            exit 0
           fi
+
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "Docker Hub username is configured."
       - uses: docker/setup-buildx-action@v3
         if: steps.dockercheck.outputs.ready == 'true'
       - uses: docker/login-action@v3
