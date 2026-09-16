@@ -238,7 +238,16 @@ def log_xgboost_sweep(X_train, y_train, X_val, y_val, random_seed, n_trials=12):
         pr_auc = eval_auc_precision_recall_curve(y_pred_prob=proba, y_true=y_val)
 
         mlflow.log_params({f"best_{k}": v for k, v in best_params.items()})
-        mlflow.log_metrics({"best_pr_auc": pr_auc, "best_f1_positive": f1})
+
+        mlflow.log_metrics(
+            {
+                "pr_auc": pr_auc,
+                "f1_positive": f1,
+                "threshold": float(threshold),
+                "best_pr_auc": pr_auc,
+                "best_f1_positive": f1,
+            }
+        )
 
         wrapped = ThresholdedSklearnModel(model=best_model, threshold=float(threshold))
         mlflow.pyfunc.log_model("model", python_model=wrapped)

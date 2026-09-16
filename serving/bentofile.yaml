@@ -1,0 +1,20 @@
+service: "serving.bento_service:FraudDetector"
+labels:
+  project: fraud-detection
+  session: "3"
+include:
+  - "serving/bento_service.py"
+python:
+  packages:
+    - scikit-learn
+    - joblib
+    - numpy
+    - pandas
+docker:
+  distro: debian
+  python_version: "3.11"
+
+# Build + containerize:
+#   bentoml build
+#   bentoml containerize fraud_detector:latest -t fraud-detector-bento:v1
+#   docker run --rm -p 8004:3000 fraud-detector-bento:v1
