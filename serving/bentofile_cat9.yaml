@@ -1,0 +1,20 @@
+service: "serving.cat9_service:FraudDetectorCAT9"
+
+labels:
+  project: fraud-detection
+  session: "3"
+  category: "cat9"
+
+include:
+  - "serving/cat9_service.py"
+
+python:
+  packages:
+    - scikit-learn==1.6.1
+    - joblib==1.5.3
+    - numpy==2.1.3
+    - pandas==2.2.2
+
+docker:
+  distro: debian
+  python_version: "3.11"

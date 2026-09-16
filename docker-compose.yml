@@ -25,10 +25,12 @@ services:
       POSTGRES_USER: mlflow
       POSTGRES_PASSWORD: mlflow
       POSTGRES_DB: mlflow
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      test: [ "CMD-SHELL", "pg_isready -U mlflow" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -52,11 +54,7 @@ services:
     depends_on:
       - minio
     entrypoint: >
-      /bin/sh -c "
-      until (/usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin) do echo waiting for minio; sleep 2; done;
-      /usr/bin/mc mb -p local/mlflow-artifacts;
-      exit 0;
-      "
+      /bin/sh -c " until (/usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin) do echo waiting for minio; sleep 2; done; /usr/bin/mc mb -p local/mlflow-artifacts; exit 0; "
 
   mlflow:
     build:
@@ -74,15 +72,20 @@ services:
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
     command: >
-      mlflow server
-      --host 0.0.0.0
-      --port 5000
-      --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow
-      --default-artifact-root s3://mlflow-artifacts/
+      mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow --default-artifact-root s3://mlflow-artifacts/
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: mlops-project-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
     restart: unless-stopped
 
 volumes:
   pgdata:
   miniodata:
-
+  redis_data:
 

@@ -1,10 +1,10 @@
 {
-  "run_id": "6fcb99610b4f4cc6a7ae12581bccea1a",
-  "pr_auc": 0.857607863173895,
-  "f1_positive": 0.8673469387755102,
-  "precision_positive": 0.8585858585858586,
-  "recall_positive": 0.8762886597938144,
-  "threshold": 0.7905054092407227,
-  "n_test_samples": 56960,
-  "n_fraud_in_test": 97
+  "run_id": "0c1a5f0dc7e44951822ac3cf736efa0d",
+  "pr_auc": 0.9239161049034998,
+  "f1_positive": 0.7857142857142857,
+  "precision_positive": 0.7857142857142857,
+  "recall_positive": 0.7857142857142857,
+  "threshold": 0.9963726997375488,
+  "n_test_samples": 8544,
+  "n_fraud_in_test": 14
 }

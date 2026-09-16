@@ -219,3 +219,21 @@ requirements_frozen.txt
 infra/.terraform/
 infra/terraform.tfstate
 infra/terraform.tfstate.*
+
+# DVC runtime state
+.dvc/tmp/
+
+# Airflow local runtime
+airflow/airflow.db
+airflow/standalone_admin_password.txt
+airflow/logs/
+
+# Generated scoring data
+data/scoring/input/*.parquet
+data/scoring/output/
+
+# Generated benchmark artifacts
+results/cat9/*.log
+# Airflow local configuration
+airflow/airflow.cfg
+airflow/webserver_config.py

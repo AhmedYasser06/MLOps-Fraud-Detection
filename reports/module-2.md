@@ -89,19 +89,17 @@ Same 30-feature input both times. The **threshold changed** (0.5226 → 0.9781) 
 - Path taken: **Docker provider (no-cloud)** — MinIO + Postgres + MLflow as containers
 - `terraform plan` output:
 
-  ```
-  No changes.
-  ```
+No changes.
+
 
 - `terraform destroy` → `terraform apply` restored a working environment: ✅
 
-  ```
-  terraform destroy
-  → terraform apply
-  → 11 resources added
-  → MLflow running
-  → curl localhost:5000 successful
-  ```
+terraform destroy
+→ terraform apply
+→ 11 resources added
+→ MLflow running
+→ curl localhost:5000 successful
+
 
 - Why state files must never be committed / what remote state solves:
 
@@ -121,3 +119,5 @@ Same 30-feature input both times. The **threshold changed** (0.5226 → 0.9781) 
 PR-AUC on a held-out split doesn't capture every real-world failure mode (latency, upstream feature drift, seasonal transaction-volume shifts) that only shows up once a model is actually serving traffic in Staging. An unattended Friday-night Production promotion is exactly the silently-broken model scenario the handbook warns about — Staging can safely be automatic because nothing user-facing depends on it yet; Production cannot.
 
 **Full green run screenshot:** `docs/ct_run.png`
+
+---

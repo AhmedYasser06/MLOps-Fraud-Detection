@@ -1,0 +1,3 @@
+Method,Name,Error,Occurrences
+POST,/predict_random_forest [batch-burst],"CatchResponseError('Expected 200, got 503')",104
+POST,/predict_random_forest,"CatchResponseError('Expected 200, got 503')",139
