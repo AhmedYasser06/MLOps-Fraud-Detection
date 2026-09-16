@@ -11,9 +11,7 @@ MODEL_URI = "models:/fraud-detector/Production"
 BASE_DIR = Path(__file__).resolve().parents[1]
 TEST_PATH = BASE_DIR / "data" / "split" / "test.csv"
 ONNX_PATH = BASE_DIR / "models" / "optimized" / "fraud_detector.onnx"
-OPTIMIZED_PATH = (
-    BASE_DIR / "models" / "optimized" / "fraud_detector_optimized.onnx"
-)
+OPTIMIZED_PATH = BASE_DIR / "models" / "optimized" / "fraud_detector_optimized.onnx"
 
 N_SAMPLES = 2000
 WARMUP = 20
@@ -138,15 +136,9 @@ def main():
     print("\nSpeedup relative to eager XGBoost")
     print("----------------------------------------------")
 
-    print(
-        f"ONNX Runtime          : "
-        f"{eager_latency / onnx_latency:.2f}x"
-    )
+    print(f"ONNX Runtime          : " f"{eager_latency / onnx_latency:.2f}x")
 
-    print(
-        f"Optimized ONNX Runtime: "
-        f"{eager_latency / optimized_latency:.2f}x"
-    )
+    print(f"Optimized ONNX Runtime: " f"{eager_latency / optimized_latency:.2f}x")
 
     # ---------------------------------------------------------
     # Accuracy equivalence
@@ -156,78 +148,40 @@ def main():
     optimized_proba = optimized_predict(X)[:, 1]
 
     onnx_diff = np.abs(eager_proba - onnx_proba)
-    optimized_diff = np.abs(
-        eager_proba - optimized_proba
-    )
+    optimized_diff = np.abs(eager_proba - optimized_proba)
 
-    onnx_pred = (
-        onnx_proba >= threshold
-    ).astype(np.int32)
+    onnx_pred = (onnx_proba >= threshold).astype(np.int32)
 
-    optimized_pred = (
-        optimized_proba >= threshold
-    ).astype(np.int32)
+    optimized_pred = (optimized_proba >= threshold).astype(np.int32)
 
-    eager_pred = (
-        eager_proba >= threshold
-    ).astype(np.int32)
+    eager_pred = (eager_proba >= threshold).astype(np.int32)
 
-    onnx_mismatches = int(
-        np.sum(eager_pred != onnx_pred)
-    )
+    onnx_mismatches = int(np.sum(eager_pred != onnx_pred))
 
-    optimized_mismatches = int(
-        np.sum(eager_pred != optimized_pred)
-    )
+    optimized_mismatches = int(np.sum(eager_pred != optimized_pred))
 
     print("\nAccuracy equivalence")
     print("----------------------------------------------")
 
-    print(
-        f"ONNX max probability diff       : "
-        f"{onnx_diff.max():.10e}"
-    )
+    print(f"ONNX max probability diff       : " f"{onnx_diff.max():.10e}")
 
-    print(
-        f"ONNX mean probability diff      : "
-        f"{onnx_diff.mean():.10e}"
-    )
+    print(f"ONNX mean probability diff      : " f"{onnx_diff.mean():.10e}")
 
-    print(
-        f"ONNX prediction mismatches      : "
-        f"{onnx_mismatches}"
-    )
+    print(f"ONNX prediction mismatches      : " f"{onnx_mismatches}")
 
-    print(
-        f"Optimized max probability diff  : "
-        f"{optimized_diff.max():.10e}"
-    )
+    print(f"Optimized max probability diff  : " f"{optimized_diff.max():.10e}")
 
-    print(
-        f"Optimized mean probability diff : "
-        f"{optimized_diff.mean():.10e}"
-    )
+    print(f"Optimized mean probability diff : " f"{optimized_diff.mean():.10e}")
 
-    print(
-        f"Optimized prediction mismatches : "
-        f"{optimized_mismatches}"
-    )
+    print(f"Optimized prediction mismatches : " f"{optimized_mismatches}")
 
     # ---------------------------------------------------------
     # Final status
     # ---------------------------------------------------------
-    if (
-        onnx_mismatches == 0
-        and optimized_mismatches == 0
-    ):
-        print(
-            "\n[PASS] All ONNX runtimes match "
-            "Production predictions."
-        )
+    if onnx_mismatches == 0 and optimized_mismatches == 0:
+        print("\n[PASS] All ONNX runtimes match " "Production predictions.")
     else:
-        print(
-            "\n[WARNING] Prediction mismatch detected."
-        )
+        print("\n[WARNING] Prediction mismatch detected.")
 
 
 if __name__ == "__main__":

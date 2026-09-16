@@ -81,10 +81,7 @@ def percentile(values, p):
 
     weight = rank - lower
 
-    return (
-        values[lower] * (1 - weight)
-        + values[upper] * weight
-    )
+    return values[lower] * (1 - weight) + values[upper] * weight
 
 
 def rollback():
@@ -103,14 +100,8 @@ def main():
     print("CAT9 CANARY WATCHER")
     print("=" * 60)
     print(f"p95 threshold:          {P95_THRESHOLD_MS:.0f} ms")
-    print(
-        f"error threshold:        "
-        f"{ERROR_RATE_THRESHOLD * 100:.1f}%"
-    )
-    print(
-        f"required bad intervals: "
-        f"{REQUIRED_BAD_INTERVALS}"
-    )
+    print(f"error threshold:        " f"{ERROR_RATE_THRESHOLD * 100:.1f}%")
+    print(f"required bad intervals: " f"{REQUIRED_BAD_INTERVALS}")
     print(f"interval:                {INTERVAL_SECONDS}s")
     print("=" * 60)
 
@@ -148,24 +139,14 @@ def main():
             print("No new canary requests in this interval.")
             continue
 
-        latencies = [
-            request["latency_ms"]
-            for request in requests
-        ]
+        latencies = [request["latency_ms"] for request in requests]
 
-        errors = [
-            request
-            for request in requests
-            if request["status"] >= 500
-        ]
+        errors = [request for request in requests if request["status"] >= 500]
 
         p95 = percentile(latencies, 95)
         error_rate = len(errors) / len(requests)
 
-        unhealthy = (
-            p95 > P95_THRESHOLD_MS
-            or error_rate > ERROR_RATE_THRESHOLD
-        )
+        unhealthy = p95 > P95_THRESHOLD_MS or error_rate > ERROR_RATE_THRESHOLD
 
         status = "BAD" if unhealthy else "HEALTHY"
 
@@ -181,10 +162,7 @@ def main():
 
             bad_intervals += 1
 
-            print(
-                f"Bad interval "
-                f"{bad_intervals}/{REQUIRED_BAD_INTERVALS}"
-            )
+            print(f"Bad interval " f"{bad_intervals}/{REQUIRED_BAD_INTERVALS}")
 
             if bad_intervals >= REQUIRED_BAD_INTERVALS:
 

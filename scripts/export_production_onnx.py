@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import mlflow
-import numpy as np
 import onnxmltools
 from onnxmltools.convert.common.data_types import FloatTensorType
 
@@ -29,15 +28,12 @@ def main():
 
     if xgb_model.n_features_in_ != N_FEATURES:
         raise ValueError(
-            f"Expected {N_FEATURES} features, "
-            f"got {xgb_model.n_features_in_}"
+            f"Expected {N_FEATURES} features, " f"got {xgb_model.n_features_in_}"
         )
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    initial_type = [
-        ("features", FloatTensorType([None, N_FEATURES]))
-    ]
+    initial_type = [("features", FloatTensorType([None, N_FEATURES]))]
 
     print("Converting XGBoost -> ONNX...")
 

@@ -77,50 +77,27 @@ def main():
     print("CAT7 Optimized ONNX Benchmark")
     print("========================================")
 
-    print(
-        f"Eager XGBoost latency : "
-        f"{eager_latency:.3f} ms / batch"
-    )
+    print(f"Eager XGBoost latency : " f"{eager_latency:.3f} ms / batch")
 
-    print(
-        f"Optimized ONNX latency: "
-        f"{latency:.3f} ms / batch"
-    )
+    print(f"Optimized ONNX latency: " f"{latency:.3f} ms / batch")
 
-    print(
-        f"Eager throughput      : "
-        f"{eager_throughput:,.2f} predictions/sec"
-    )
+    print(f"Eager throughput      : " f"{eager_throughput:,.2f} predictions/sec")
 
-    print(
-        f"Optimized throughput  : "
-        f"{throughput:,.2f} predictions/sec"
-    )
+    print(f"Optimized throughput  : " f"{throughput:,.2f} predictions/sec")
 
-    print(
-        f"Speedup vs eager      : "
-        f"{eager_latency / latency:.2f}x"
-    )
+    print(f"Speedup vs eager      : " f"{eager_latency / latency:.2f}x")
 
     # Accuracy
     eager_proba = eager_predict(X)[:, 1]
     onnx_proba = optimized_predict(X)[:, 1]
 
-    max_diff = np.max(
-        np.abs(eager_proba - onnx_proba)
-    )
+    max_diff = np.max(np.abs(eager_proba - onnx_proba))
 
-    eager_pred = (
-        eager_proba >= threshold
-    ).astype(int)
+    eager_pred = (eager_proba >= threshold).astype(int)
 
-    onnx_pred = (
-        onnx_proba >= threshold
-    ).astype(int)
+    onnx_pred = (onnx_proba >= threshold).astype(int)
 
-    mismatches = np.sum(
-        eager_pred != onnx_pred
-    )
+    mismatches = np.sum(eager_pred != onnx_pred)
 
     print("\nAccuracy equivalence")
     print("----------------------------------------")

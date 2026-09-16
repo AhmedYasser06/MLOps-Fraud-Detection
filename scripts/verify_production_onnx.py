@@ -41,9 +41,7 @@ def main():
     # Production XGBoost
     # ---------------------------------------------------------
     production_proba = xgb_model.predict_proba(X)[:, 1]
-    production_pred = (
-        production_proba >= threshold
-    ).astype(np.int32)
+    production_pred = (production_proba >= threshold).astype(np.int32)
 
     # ---------------------------------------------------------
     # ONNX Runtime
@@ -67,10 +65,7 @@ def main():
     print(f"Number of outputs     : {len(outputs)}")
 
     for i, output in enumerate(outputs):
-        print(
-            f"Output {i}: shape={output.shape}, "
-            f"dtype={output.dtype}"
-        )
+        print(f"Output {i}: shape={output.shape}, " f"dtype={output.dtype}")
 
     # ---------------------------------------------------------
     # Extract probability output
@@ -83,9 +78,7 @@ def main():
     # Probability may be [N, 2].
     #
     if len(outputs) < 2:
-        raise RuntimeError(
-            "Expected ONNX model to return label + probability outputs."
-        )
+        raise RuntimeError("Expected ONNX model to return label + probability outputs.")
 
     onnx_labels = np.asarray(outputs[0]).reshape(-1)
     onnx_probabilities = np.asarray(outputs[1])
@@ -93,8 +86,7 @@ def main():
     if onnx_probabilities.ndim == 2:
         if onnx_probabilities.shape[1] != 2:
             raise RuntimeError(
-                f"Expected [N, 2] probabilities, "
-                f"got {onnx_probabilities.shape}"
+                f"Expected [N, 2] probabilities, " f"got {onnx_probabilities.shape}"
             )
 
         onnx_proba = onnx_probabilities[:, 1]
@@ -104,9 +96,7 @@ def main():
     # ---------------------------------------------------------
     # Compare probabilities
     # ---------------------------------------------------------
-    probability_diff = np.abs(
-        production_proba - onnx_proba
-    )
+    probability_diff = np.abs(production_proba - onnx_proba)
 
     max_diff = float(probability_diff.max())
     mean_diff = float(probability_diff.mean())
@@ -119,13 +109,9 @@ def main():
     # ---------------------------------------------------------
     # Compare thresholded predictions
     # ---------------------------------------------------------
-    onnx_pred = (
-        onnx_proba >= threshold
-    ).astype(np.int32)
+    onnx_pred = (onnx_proba >= threshold).astype(np.int32)
 
-    prediction_mismatches = int(
-        np.sum(production_pred != onnx_pred)
-    )
+    prediction_mismatches = int(np.sum(production_pred != onnx_pred))
 
     print("\nPrediction comparison")
     print("---------------------")
@@ -136,10 +122,7 @@ def main():
     # ---------------------------------------------------------
     # Result
     # ---------------------------------------------------------
-    passed = (
-        max_diff <= THRESHOLD_TOLERANCE
-        and prediction_mismatches == 0
-    )
+    passed = max_diff <= THRESHOLD_TOLERANCE and prediction_mismatches == 0
 
     if passed:
         print("\n[PASS] ONNX matches Production model.")

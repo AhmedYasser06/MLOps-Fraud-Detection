@@ -72,10 +72,7 @@ def batch_score(
     input_pf = pq.ParquetFile(input_path)
     total_rows = input_pf.metadata.num_rows
 
-    print(
-        f"Scoring {total_rows:,} transactions "
-        f"in chunks of {chunk_size:,} ..."
-    )
+    print(f"Scoring {total_rows:,} transactions " f"in chunks of {chunk_size:,} ...")
 
     tracemalloc.start()
     start = time.perf_counter()
@@ -144,31 +141,20 @@ def batch_score(
     _current, peak_bytes = tracemalloc.get_traced_memory()
     tracemalloc.stop()
 
-    rows_per_sec = (
-        total_rows / elapsed_s
-        if elapsed_s > 0
-        else float("inf")
-    )
+    rows_per_sec = total_rows / elapsed_s if elapsed_s > 0 else float("inf")
 
     instance_hours_per_million = (
-        (1_000_000 / rows_per_sec) / 3600
-        if rows_per_sec
-        else 0
+        (1_000_000 / rows_per_sec) / 3600 if rows_per_sec else 0
     )
 
-    cost_per_million = (
-        instance_hours_per_million * instance_cost_per_hour
-    )
+    cost_per_million = instance_hours_per_million * instance_cost_per_hour
 
     print(f"Done -> {output_file}")
     print(f"  rows scored:          {rows_written:,}")
     print(f"  flagged as fraud:     {flagged_total:,}")
     print(f"  wall-clock time:      {elapsed_s:.1f}s")
     print(f"  throughput:           {rows_per_sec:,.0f} rows/sec")
-    print(
-        f"  peak memory (traced): "
-        f"{peak_bytes / 1e6:.1f} MB"
-    )
+    print(f"  peak memory (traced): " f"{peak_bytes / 1e6:.1f} MB")
     print(
         f"  est. cost / 1M rows: "
         f"${cost_per_million:.4f} "
@@ -176,14 +162,23 @@ def batch_score(
     )
     print(f"  output partition:     run_date={run_date}")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input")
     parser.add_argument("--output")
     parser.add_argument("--chunk-size", type=int, default=100_000)
-    parser.add_argument("--instance-cost-per-hour", type=float, default=DEFAULT_INSTANCE_COST_PER_HOUR)
-    parser.add_argument("--make-sample", metavar="PATH", help="write a synthetic dataset instead of scoring")
-    parser.add_argument("--rows", type=int, default=1_200_000, help="rows for --make-sample")
+    parser.add_argument(
+        "--instance-cost-per-hour", type=float, default=DEFAULT_INSTANCE_COST_PER_HOUR
+    )
+    parser.add_argument(
+        "--make-sample",
+        metavar="PATH",
+        help="write a synthetic dataset instead of scoring",
+    )
+    parser.add_argument(
+        "--rows", type=int, default=1_200_000, help="rows for --make-sample"
+    )
     args = parser.parse_args()
 
     if args.make_sample:
@@ -191,4 +186,6 @@ if __name__ == "__main__":
     else:
         if not args.input or not args.output:
             parser.error("--input and --output are required unless using --make-sample")
-        batch_score(args.input, args.output, args.chunk_size, args.instance_cost_per_hour)
+        batch_score(
+            args.input, args.output, args.chunk_size, args.instance_cost_per_hour
+        )

@@ -14,9 +14,7 @@ def main():
     session_options = ort.SessionOptions()
 
     # Enable the highest available ONNX Runtime graph optimization.
-    session_options.graph_optimization_level = (
-        ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-    )
+    session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
 
     # Ask ONNX Runtime to save the optimized graph.
     session_options.optimized_model_filepath = str(OUTPUT_PATH)
