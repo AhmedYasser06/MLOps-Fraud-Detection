@@ -1,7 +1,5 @@
 import time
 from pathlib import Path
-import os
-import asyncio
 import joblib
 import numpy as np
 from fastapi import FastAPI, HTTPException, Request, Response

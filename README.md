@@ -460,27 +460,129 @@ The reports contain the detailed benchmark methodology, measurements, failure mo
 
 ---
 
-## Observability (Module 5)
+## Observability (Module 4)
 
-Full stack added on top of the serving layer above: Prometheus (`/metrics`,
-multiprocess-safe) + node-exporter + cAdvisor + blackbox-exporter, a
-4-row Grafana dashboard provisioned from this repo
-(`monitoring/grafana/`), Alertmanager routing 8 alert rules to Slack
-(symptom vs. cause, one multi-window SLO burn-rate alert), a from-scratch
-implementation of 6 drift detection methods (KS, Chi-square, Wasserstein,
-JS/KL, MMD + domain classifier, ADWIN/DDM — see `monitoring/drift_stats.py`
-and its 13 unit tests), a scheduled Evidently drift job writing to
-PostgreSQL and gating both CI and an Airflow retraining branch (with a
-storm-guard cooldown), and Loki/Promtail for structured prediction-event
-logs. Full write-up, detection matrix, and two real bugs caught by testing
-this against real data: `reports/module-4.md`.
+The project includes a production-style observability stack for the fraud
+detection API, covering application metrics, infrastructure monitoring,
+drift detection, alerting, structured logs, persistence, and automated
+monitoring workflows.
 
+### Monitoring Stack
+
+- **Prometheus** — application and infrastructure metrics
+- **Grafana** — observability dashboards
+- **Alertmanager** — alert routing, grouping, and inhibition
+- **Loki + Promtail** — structured prediction-event logs
+- **Evidently** — data drift reports and automated drift tests
+- **PostgreSQL** — persistent drift measurements
+- **Airflow** — scheduled drift monitoring and retraining orchestration
+- **Locust** — capacity and load testing
+
+### Application Observability
+
+The FastAPI service exposes a Prometheus `/metrics` endpoint with:
+
+- Request counters
+- Error counters
+- Prediction latency histograms
+- In-flight requests
+- Model metadata
+- Prediction score metrics
+- Resource and process metrics
+
+Prometheus recording rules are used for frequently queried metrics.
+Six recording rules were implemented and benchmarked, showing approximately
+27.8% lower query latency than the equivalent direct PromQL queries in the
+local benchmark.
+
+### Drift Detection
+
+The project includes:
+
+- Statistical drift detection utilities
+- Evidently Report + TestSuite
+- Synthetic drift scenarios for validation
+- PostgreSQL persistence of feature-level drift measurements
+- Grafana visualization of drift history
+
+The monitoring workflow follows:
+
+```text
+Reference / Current Data
+        ↓
+     Evidently
+        ↓
+ Drift Evaluation
+        ↓
+   PostgreSQL
+        ↓
+     Grafana
 ```
-docker compose up -d prometheus grafana alertmanager node-exporter cadvisor blackbox-exporter loki promtail
-# Grafana:      http://localhost:3000  (admin/admin)
-# Prometheus:   http://localhost:9090
-# Alertmanager: http://localhost:9093
+
+### Automated Alerting
+
+Alertmanager is configured with symptom, cause, and SLO burn-rate alerts,
+including:
+
+- API service availability
+- High prediction latency
+- High error rate
+- Traffic volume drop
+- Fraud drift score
+- Container memory
+- Model artifact freshness
+- SLO burn-rate conditions
+
+Alert inhibition was also validated so that service-down conditions can
+suppress dependent symptom alerts.
+
+### Load Testing
+
+A 100-concurrent-user Locust workload was used to evaluate the FastAPI
+service.
+
+Observed results:
+
+| Metric | Result |
+|---|---:|
+| Concurrent users | 100 |
+| Duration | 3 minutes |
+| Requests | 3,021 |
+| Failures | 0 |
+| Peak throughput | ~16.6 req/s |
+| Locust p95 | 8.1 s |
+| Server-side p95 | ~5 s |
+
+The test was also correlated with Prometheus resource metrics to evaluate
+system behavior under concurrency.
+
+### Airflow Monitoring Workflow
+
+The drift monitoring workflow connects observability to model operations:
+
+```text
+Evidently
+    ↓
+Drift Evaluation
+    ↓
+Airflow Monitoring DAG
+    ↓
+    ├── No Drift → Skip Retraining
+    │
+    └── Drift → Trigger Retraining
 ```
+
+The no-drift branch has been validated end-to-end: the monitoring DAG
+completed successfully, the retraining branch was skipped, and the
+notification task completed successfully.
+
+### Documentation
+
+Full implementation evidence is available in:
+
+- `reports/module-4.md` — observability implementation and validation
+- `docs/runbook.md` — operational runbook
+- `monitoring/` — Prometheus, Grafana, Alertmanager, Loki, and drift tooling
 
 ---
 
@@ -492,7 +594,7 @@ docker compose up -d prometheus grafana alertmanager node-exporter cadvisor blac
 
 **Serving:** FastAPI, BentoML, ONNX Runtime, OpenVINO, Redis Streams
 
-**Observability:** Prometheus, Grafana, Alertmanager, Loki, Evidently
+**Observability:** Prometheus, Grafana, Alertmanager, Loki, Promtail, Evidently, PostgreSQL
 
 **Testing / Deployment:** Locust, Nginx, Docker Compose, GitHub Actions
 
@@ -516,7 +618,7 @@ Different inference patterns are appropriate for different workloads:
 
 ## Project Status
 
-Module 5 implementation complete.
+Module 4 — Observability implementation in progress.
 
 **Implemented:**
 
@@ -535,15 +637,19 @@ Module 5 implementation complete.
 - [x] Automatic rollback watcher
 - [x] Slow-canary failure injection
 - [x] Shadow deployment
-- [x] Prometheus + multiprocess-safe /metrics
-- [x] node-exporter, cAdvisor, blackbox-exporter
-- [x] 4-row Grafana dashboard, provisioned from repo
-- [x] Alertmanager routing, grouping, inhibition, SLO burn-rate alert
-- [x] 6 drift detection methods, implemented from scratch, unit-tested
-- [x] Evidently Report + TestSuite → PostgreSQL → Grafana → CI gate → Airflow retrain branch
-- [x] Retraining storm guard (cooldown, sample floor, daily cap)
-- [x] Structured prediction-event logs → Loki/Promtail
-- [x] On-call runbook
+- [x] Prometheus metrics
+- [x] Prometheus recording rules
+- [x] Grafana observability dashboard
+- [x] Alertmanager alerting and inhibition
+- [x] Drift detection and simulation
+- [x] Evidently drift reports and tests
+- [x] PostgreSQL drift persistence
+- [x] Airflow drift monitoring branch
+- [x] Structured prediction-event logging
+- [x] Loki/Promtail logging
+- [x] Capacity/load testing
+- [x] Observability runbook
+- [x] Automated observability tests
 
 ---
 
