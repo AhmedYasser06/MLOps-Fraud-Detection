@@ -1,9 +1,23 @@
+import time
 from pathlib import Path
-
+import os
+import asyncio
 import joblib
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel
+
+from src.observability.metrics import (
+    inflight_requests,
+    inference_batch_size,
+    predictions_total,
+    prediction_latency_seconds,
+    record_prediction,
+    render_latest,
+    set_model_info,
+    track_stage,
+)
+from src.observability.logging import log_prediction_event, new_correlation_id
 
 
 # --------------------------------------------------
@@ -45,6 +59,46 @@ app = FastAPI(
     description="API for credit card fraud prediction using trained ML models.",
     version="0.1.0",
 )
+
+set_model_info(model_version="voting_classifier+rf+nn", framework="sklearn")
+
+
+@app.middleware("http")
+async def track_request_metrics(request: Request, call_next):
+    """inflight_requests gauge + predictions_total counter for every /predict/* call.
+
+    Kept as middleware (rather than per-route code) so a new /predict/* route
+    never silently skips instrumentation.
+    """
+    is_prediction_route = request.url.path.startswith("/predict/")
+    if is_prediction_route:
+        inflight_requests.inc()
+    start = time.perf_counter()
+
+    try:
+        response = await call_next(request)
+        status = "ok" if response.status_code < 400 else "error"
+        return response
+    except Exception:
+        status = "error"
+        raise
+    finally:
+        if is_prediction_route:
+            inflight_requests.dec()
+            model_name = request.url.path.rsplit("/", 1)[-1]
+            predictions_total.labels(model_version=model_name, status=status).inc()
+            prediction_latency_seconds.labels(stage="total").observe(
+                time.perf_counter() - start
+            )
+
+
+@app.get("/metrics")
+def metrics():
+    """Prometheus scrape target. Multiprocess-safe — see
+    src/observability/metrics.py for why this matters under gunicorn/uvicorn
+    with more than one worker."""
+    payload, content_type = render_latest()
+    return Response(content=payload, media_type=content_type)
 
 
 # --------------------------------------------------
@@ -187,20 +241,71 @@ except Exception as _e:  # MLflow server not reachable — degrade gracefully
 
 @app.post("/predict/production")
 def predict_production(request: PredictionRequest):
+    correlation_id = new_correlation_id()
+    stage_durations_ms: dict[str, float] = {}
+
     if _production_model is None:
         raise HTTPException(
             status_code=503,
             detail="Production model not loaded — is the MLflow tracking server reachable?",
         )
     try:
-        X = np.array(request.features, dtype=float).reshape(1, -1)
-        result = _production_model.predict(X)
+        with track_stage("preprocess"):
+            t0 = time.perf_counter()
+            X = np.array(request.features, dtype=float).reshape(1, -1)
+            inference_batch_size.observe(X.shape[0])
+            stage_durations_ms["preprocess"] = (time.perf_counter() - t0) * 1000
+
+        with track_stage("inference"):
+            t0 = time.perf_counter()
+            result = _production_model.predict(X)
+            stage_durations_ms["inference"] = (time.perf_counter() - t0) * 1000
+
+        probability = float(result["probability"][0])
+        threshold = float(result["threshold"])
+        prediction = int(result["prediction"][0])
+
+        # Amount is conventionally the second-to-last feature in this
+        # dataset's raw ordering (Time, V1..V28, Amount) — only logged as a
+        # scalar for the input-signal histogram, never as a label.
+        amount = request.features[-1] if len(request.features) >= 30 else None
+        record_prediction(
+            model_version="production",
+            probability=probability,
+            threshold=threshold,
+            amount=amount,
+        )
+
+        log_prediction_event(
+            correlation_id=correlation_id,
+            model_version="production",
+            stage_durations_ms=stage_durations_ms,
+            features=request.features,
+            prediction=prediction,
+            probability=probability,
+            threshold=threshold,
+        )
+
         return {
             "model": "production",
-            "prediction": int(result["prediction"][0]),
-            "fraud": bool(result["prediction"][0]),
-            "probability": float(result["probability"][0]),
-            "threshold": float(result["threshold"]),
+            "prediction": prediction,
+            "fraud": bool(prediction),
+            "probability": probability,
+            "threshold": threshold,
+            "correlation_id": correlation_id,
         }
+    except HTTPException:
+        raise
     except Exception as e:
+        log_prediction_event(
+            correlation_id=correlation_id,
+            model_version="production",
+            stage_durations_ms=stage_durations_ms,
+            features=request.features if request.features else [],
+            prediction=-1,
+            probability=-1.0,
+            threshold=-1.0,
+            status="error",
+            error=str(e),
+        )
         raise HTTPException(status_code=400, detail=str(e))

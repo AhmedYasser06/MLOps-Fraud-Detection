@@ -1,10 +1,10 @@
 {
-  "run_id": "0c1a5f0dc7e44951822ac3cf736efa0d",
-  "pr_auc": 0.9239161049034998,
+  "run_id": "0366ffe90d4240e38e2b71f96d03d25f",
+  "pr_auc": 0.9295658718032667,
   "f1_positive": 0.7857142857142857,
   "precision_positive": 0.7857142857142857,
   "recall_positive": 0.7857142857142857,
-  "threshold": 0.9963726997375488,
+  "threshold": 0.9744136333465576,
   "n_test_samples": 8544,
   "n_fraud_in_test": 14
 }

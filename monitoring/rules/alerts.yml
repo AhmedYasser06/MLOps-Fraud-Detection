@@ -1,0 +1,159 @@
+# Alert taxonomy used throughout this file:
+#   symptom -> something a user feels right now -> pages (critical)
+#   cause   -> something that will hurt later    -> tickets (warning/info)
+#
+# Every rule has `for:` so a single scrape blip never pages anyone, and every
+# annotation has a first_action plus a runbook_section pointing into
+# docs/runbook.md, per the acceptance check in Step 07.
+
+groups:
+  - name: fraud-api-symptom-alerts
+    rules:
+      # --- Service down (blackbox probe failing) — symptom, critical -----
+      - alert: FraudAPIServiceDown
+        expr: probe_success{job="blackbox-fraud-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          route: page
+          kind: symptom
+        annotations:
+          summary: "Fraud API health probe is failing"
+          description: >
+            The blackbox probe against /health has failed for 1 minute.
+            Users are getting errors or timeouts right now.
+          first_action: "curl http://<host>:8000/health directly; check `docker compose ps api`"
+          runbook_section: "docs/runbook.md#service-down"
+
+      # --- p95 latency above SLA — symptom, critical ----------------------
+      - alert: FraudAPIHighLatency
+        expr: fraud_api:prediction_latency_seconds:p95_by_stage{stage="total"} > 0.2
+        for: 5m
+        labels:
+          severity: critical
+          route: page
+          kind: symptom
+        annotations:
+          summary: "p95 prediction latency above 200ms SLA for 5 minutes"
+          description: "Current p95: {{ $value | humanizeDuration }}"
+          first_action: "Check queue vs compute time and inflight_requests on the Service Health row"
+          runbook_section: "docs/runbook.md#high-latency"
+
+      # --- Error rate above 1% — symptom, critical ------------------------
+      - alert: FraudAPIHighErrorRate
+        expr: fraud_api:error_ratio:by_model_version > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          route: page
+          kind: symptom
+        annotations:
+          summary: "Error rate above 1% for model_version={{ $labels.model_version }}"
+          description: "Current error ratio: {{ $value | humanizePercentage }}"
+          first_action: "docker compose logs -f api --since 10m | grep status.*error"
+          runbook_section: "docs/runbook.md#high-error-rate"
+
+      # --- Prediction volume dropped — symptom, warning -------------------
+      - alert: FraudAPIVolumeDrop
+        expr: >
+          fraud_api:requests:rate5m
+          < 0.5 * (fraud_api:requests:rate5m offset 1d)
+        for: 10m
+        labels:
+          severity: warning
+          route: ticket
+          kind: symptom
+        annotations:
+          summary: "Prediction volume dropped more than 50% vs the same hour yesterday"
+          first_action: "Check upstream traffic source / gateway; confirm this isn't a deploy-window dip"
+          runbook_section: "docs/runbook.md#volume-drop"
+
+  - name: fraud-api-cause-alerts
+    rules:
+      # --- Drift score above threshold — cause, warning -------------------
+      - alert: FraudDriftScoreHigh
+        expr: fraud_drift_score > 0.25
+        for: 0m
+        labels:
+          severity: warning
+          route: ticket
+          kind: cause
+        annotations:
+          summary: "Drift score above threshold on feature={{ $labels.feature }}"
+          description: "value={{ $value }}, metric={{ $labels.metric }}, dataset={{ $labels.dataset }}"
+          first_action: "Open the Drift History row in Grafana and compare against the deploy annotation"
+          runbook_section: "docs/runbook.md#drift-detected"
+
+      # --- Resource saturation — cause, warning ---------------------------
+      - alert: ContainerMemoryNearLimit
+        expr: >
+          container_memory_usage_bytes{name=~"mlops-project.*|fraud-repo.*"}
+          / container_spec_memory_limit_bytes{name=~"mlops-project.*|fraud-repo.*"}
+          > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          route: ticket
+          kind: cause
+        annotations:
+          summary: "Container {{ $labels.name }} memory above 90% of its limit"
+          first_action: "docker stats --no-stream | grep {{ $labels.name }}"
+          runbook_section: "docs/runbook.md#resource-saturation"
+
+      # --- Model artifact age exceeds retraining SLA — cause, info -------
+      - alert: ModelArtifactStale
+        expr: time() - fraud_api_model_last_trained_timestamp > 30 * 24 * 3600
+        for: 0m
+        labels:
+          severity: info
+          route: ticket
+          kind: cause
+        annotations:
+          summary: "Production model has not been retrained in 30+ days"
+          first_action: "Check the last successful run of dags/monitoring_dag.py and fraud_retrain_dag.py in Airflow"
+          runbook_section: "docs/runbook.md#stale-model"
+
+  - name: fraud-api-slo-burn-rate
+    rules:
+      # Multi-window burn-rate alert for a 99% < 200ms SLO over 30 days.
+      # Fast window catches fast burns; slow window suppresses noise from a
+      # single bad minute. Both must be burning for this to fire.
+      - alert: FraudAPISLOBurnRateFast
+        expr: >
+          (
+            fraud_api:error_ratio:by_model_version > (14.4 * 0.01)
+          )
+          and
+          (
+            fraud_api:prediction_latency_seconds:p95_by_stage{stage="total"} > 0.2
+          )
+        for: 2m
+        labels:
+          severity: critical
+          route: page
+          kind: symptom
+          slo: "99pct-under-200ms-30d"
+        annotations:
+          summary: "Fast-burn: consuming the 30-day error budget in under ~2 days at this rate"
+          first_action: "Treat as FraudAPIHighLatency/FraudAPIHighErrorRate — this is the same incident, different lens"
+          runbook_section: "docs/runbook.md#slo-burn-rate"
+
+      - alert: FraudAPISLOBurnRateSlow
+        expr: >
+          (
+            fraud_api:error_ratio:by_model_version > (1 * 0.01)
+          )
+          and
+          (
+            fraud_api:prediction_latency_seconds:p95_by_stage{stage="total"} > 0.2
+          )
+        for: 1h
+        labels:
+          severity: warning
+          route: ticket
+          kind: symptom
+          slo: "99pct-under-200ms-30d"
+        annotations:
+          summary: "Slow-burn: sustained low-grade SLO violation over the last hour"
+          first_action: "Not urgent tonight — put it on tomorrow's board; check for a slow leak (memory, connection pool)"
+          runbook_section: "docs/runbook.md#slo-burn-rate"

@@ -331,8 +331,10 @@ This project implements **Canary + Shadow** deployment.
 ├── dags/                     # Airflow DAGs
 ├── data/                     # Dataset and scoring data
 ├── docs/                     # Architecture and supporting documentation
+├── jobs/                     # Scheduled jobs (Evidently drift job, Postgres store)
 ├── load_testing/             # Locust workloads
 ├── models/                   # Model artifacts / optimized models
+├── monitoring/                # Prometheus/Grafana/Alertmanager config, drift simulator + detectors
 ├── nginx/                    # CAT9 nginx configuration
 ├── notebooks/                # EDA and experiments
 ├── reports/                  # Module reports and benchmark evidence
@@ -340,6 +342,7 @@ This project implements **Canary + Shadow** deployment.
 │   └── cat9/                 # Canary / rollback automation
 ├── serving/                  # BentoML serving implementations
 ├── src/                      # Training, API, and production inference code
+│   ├── observability/          # Prometheus metrics + structured logging
 │   └── prodml/                # Production batch inference
 ├── streaming/                 # Redis producer / consumer
 ├── tests/                     # Automated tests
@@ -449,9 +452,35 @@ Detailed implementation and experiment evidence:
 
 - `reports/module-2.md` — MLflow, DVC, CI/CD and MLOps pipeline
 - `reports/module-3.md` — model serving and production inference
+- `reports/module-4.md` — observability, drift detection, the closed drift-to-retrain loop
+- `docs/runbook.md` — on-call runbook (one section per alert)
 - `docs/` — architecture and supporting documentation
 
 The reports contain the detailed benchmark methodology, measurements, failure modes, and implementation evidence. The headline numbers above are summarized here; full evidence stays in the reports.
+
+---
+
+## Observability (Module 5)
+
+Full stack added on top of the serving layer above: Prometheus (`/metrics`,
+multiprocess-safe) + node-exporter + cAdvisor + blackbox-exporter, a
+4-row Grafana dashboard provisioned from this repo
+(`monitoring/grafana/`), Alertmanager routing 8 alert rules to Slack
+(symptom vs. cause, one multi-window SLO burn-rate alert), a from-scratch
+implementation of 6 drift detection methods (KS, Chi-square, Wasserstein,
+JS/KL, MMD + domain classifier, ADWIN/DDM — see `monitoring/drift_stats.py`
+and its 13 unit tests), a scheduled Evidently drift job writing to
+PostgreSQL and gating both CI and an Airflow retraining branch (with a
+storm-guard cooldown), and Loki/Promtail for structured prediction-event
+logs. Full write-up, detection matrix, and two real bugs caught by testing
+this against real data: `reports/module-4.md`.
+
+```
+docker compose up -d prometheus grafana alertmanager node-exporter cadvisor blackbox-exporter loki promtail
+# Grafana:      http://localhost:3000  (admin/admin)
+# Prometheus:   http://localhost:9090
+# Alertmanager: http://localhost:9093
+```
 
 ---
 
@@ -462,6 +491,8 @@ The reports contain the detailed benchmark methodology, measurements, failure mo
 **MLOps:** MLflow, DVC, Airflow, Docker, MinIO, PostgreSQL
 
 **Serving:** FastAPI, BentoML, ONNX Runtime, OpenVINO, Redis Streams
+
+**Observability:** Prometheus, Grafana, Alertmanager, Loki, Evidently
 
 **Testing / Deployment:** Locust, Nginx, Docker Compose, GitHub Actions
 
@@ -485,7 +516,7 @@ Different inference patterns are appropriate for different workloads:
 
 ## Project Status
 
-Module 3 implementation complete.
+Module 5 implementation complete.
 
 **Implemented:**
 
@@ -504,6 +535,15 @@ Module 3 implementation complete.
 - [x] Automatic rollback watcher
 - [x] Slow-canary failure injection
 - [x] Shadow deployment
+- [x] Prometheus + multiprocess-safe /metrics
+- [x] node-exporter, cAdvisor, blackbox-exporter
+- [x] 4-row Grafana dashboard, provisioned from repo
+- [x] Alertmanager routing, grouping, inhibition, SLO burn-rate alert
+- [x] 6 drift detection methods, implemented from scratch, unit-tested
+- [x] Evidently Report + TestSuite → PostgreSQL → Grafana → CI gate → Airflow retrain branch
+- [x] Retraining storm guard (cooldown, sample floor, daily cap)
+- [x] Structured prediction-event logs → Loki/Promtail
+- [x] On-call runbook
 
 ---
 
