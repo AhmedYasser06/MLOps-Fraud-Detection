@@ -1,8 +1,8 @@
-FROM python:3.10-slim
+FROM ghcr.io/astral-sh/uv:python3.10-bookworm-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir uv
+ENV UV_HTTP_TIMEOUT=300
 
 COPY pyproject.toml uv.lock README.md ./
 

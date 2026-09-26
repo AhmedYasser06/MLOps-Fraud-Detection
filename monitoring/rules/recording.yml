@@ -1,0 +1,40 @@
+groups:
+  - name: fraud-api-recording-rules
+    interval: 15s
+    rules:
+      # p95 latency by stage — the dashboard's most-repeated panel query.
+      - record: fraud_api:prediction_latency_seconds:p95_by_stage
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(fraud_api_prediction_latency_seconds_bucket[5m])) by (le, stage))
+
+      # p50/p99 too, same shape, so panels don't each recompute the rate().
+      - record: fraud_api:prediction_latency_seconds:p50_by_stage
+        expr: >
+          histogram_quantile(0.50,
+            sum(rate(fraud_api_prediction_latency_seconds_bucket[5m])) by (le, stage))
+
+      - record: fraud_api:prediction_latency_seconds:p99_by_stage
+        expr: >
+          histogram_quantile(0.99,
+            sum(rate(fraud_api_prediction_latency_seconds_bucket[5m])) by (le, stage))
+
+      # error rate by model_version — read by both the dashboard and the
+      # "error rate above 1%" alert, so computing it once here is a real
+      # saving, not just a dashboard-load-time trick.
+      - record: fraud_api:error_ratio:by_model_version
+        expr: >
+          sum(rate(fraud_api_predictions_total{status="error"}[5m])) by (model_version)
+          /
+          sum(rate(fraud_api_predictions_total[5m])) by (model_version)
+
+      # request throughput per second.
+      - record: fraud_api:requests:rate5m
+        expr: sum(rate(fraud_api_predictions_total[5m])) by (model_version)
+
+      # median predicted fraud probability, 24h window — the cheap
+      # continuous drift signal from the metric contract.
+      - record: fraud_api:prediction_score:p50_24h
+        expr: >
+          histogram_quantile(0.50,
+            sum(increase(fraud_api_prediction_score_bucket[24h])) by (le))

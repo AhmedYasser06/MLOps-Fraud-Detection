@@ -237,3 +237,4 @@ results/cat9/*.log
 # Airflow local configuration
 airflow/airflow.cfg
 airflow/webserver_config.py
+monitoring/drift_scenarios/
